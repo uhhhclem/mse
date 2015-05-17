@@ -1,15 +1,13 @@
 package main
 
 import (
-    "fmt"
-    
-    "mse"
+	"fmt"
+
+	"mse"
 )
 
 func main() {
-    var card int
-    for deck := mse.NearSystemDeck; len(deck) > 0; {
-        card, deck = mse.Draw(deck)
-        fmt.Println(*mse.Systems[card])
-    }
+	g := mse.NewGame()
+
+	fmt.Println(g)
 }
