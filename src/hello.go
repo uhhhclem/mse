@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"mse"
@@ -9,5 +10,10 @@ import (
 func main() {
 	g := mse.NewGame()
 
-	fmt.Println(g)
+	b, err := json.Marshal(g.GetBoard())
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(b))
 }

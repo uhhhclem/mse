@@ -1,14 +1,14 @@
 package mse
 
 const (
-	CapitalShips          = iota + 1
-	RobotWorkers          
-	HyperTelevision       
-	InterspeciesCommerce  
-	ForwardStarbases      
-	PlanetaryDefenses     
-	InterstellarDiplomacy 
-	InterstellarBanking   
+	CapitalShips = iota + 1
+	RobotWorkers
+	HyperTelevision
+	InterspeciesCommerce
+	ForwardStarbases
+	PlanetaryDefenses
+	InterstellarDiplomacy
+	InterstellarBanking
 )
 
 type Tech struct {
