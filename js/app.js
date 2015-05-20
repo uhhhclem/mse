@@ -1,6 +1,6 @@
 var mseApp = angular.module('mseApp', ['ngMaterial']);
 
-mseApp.controller('mainCtrl', function($scope, $http){
+mseApp.controller('mseCtrl', function($scope, $http){
     $http.get('/api/newGame').success(function(d){
         $scope.board = d;
     });
