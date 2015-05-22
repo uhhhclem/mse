@@ -18,9 +18,14 @@
 .military .track-tile {
   background: #84ffff; }
 .current {
-  color: white;
-  background-color: black;
+  color: red;
 }
+
+.card {
+  width: 150px;
+  height: 200px;
+}
+
   </style>
 
   <!-- Angular Material Dependencies -->
@@ -55,7 +60,11 @@
         <div>techs</div>
       </div>
       <div flex="50">
-        <div>empire</div>
+        <div>
+          <div ng-repeat="card in board.Empire track by ID">
+            <ng-include src="'templates/card.ng'"/>
+          </div>
+        </div>
         <div>explored</div>
         <div>event info</div>
       </div>

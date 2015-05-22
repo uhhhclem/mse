@@ -1,0 +1,18 @@
+<md-card class="card">
+    <md-subheader class="md-primary">
+        <div>
+            {{card.Name}}
+        </div>
+    </md-subheader>
+    <md-card-content">
+        <div ng-if="card.Resistance">
+            Resistance: {{card.Resistance}}
+        </div>
+        <div ng-if="card.Metal">
+            Metal: {{card.Metal}}
+        </div>
+        <div ng-if="card.Wealth">
+            Wealth: {{card.Wealth}}
+        </div>
+    </md-card-content>
+</md-card>
