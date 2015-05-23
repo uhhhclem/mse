@@ -1,0 +1,7 @@
+<md-card class="tech">
+  <md-card-content>
+    <h3>{{tech.Name}}</h3>
+    <p>{{tech.Ability}}</p>
+    <p>Cost: {{tech.Cost}}</p>
+  <md-card-content>
+</md-card>
