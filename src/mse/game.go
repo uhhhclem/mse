@@ -1,6 +1,31 @@
 package mse
 
+import (
+	"fmt"
+)
+
+type GameState string
+
+const (
+	StartState        GameState = "StartOfTurn"
+	SystemChoiceState           = "SystemChoice"
+	AttackState                 = "Attack"
+	EndState                    = "End"
+)
+
+type stateHandler func(*Game) GameState
+
+var handlers map[GameState]stateHandler
+
+func init() {
+	handlers = map[GameState]stateHandler{
+		StartState:  handleStart,
+		AttackState: handleAttack,
+	}
+}
+
 type Game struct {
+	State                                        GameState
 	NearSystemDeck, DistantSystemDeck, EventDeck Deck
 	Empire                                       []*SystemCard
 	Explored                                     []*SystemCard
@@ -12,6 +37,11 @@ type Game struct {
 	MilitaryStrength                             int
 	MetalProduction                              int
 	WealthProduction                             int
+	Prompt                                       *Prompt
+	NextPrompt                                   chan *Prompt
+	NextStatus                                   chan *Status
+	NextChoice                                   chan *Choice
+	Ready                                        chan bool
 }
 
 func NewGame() *Game {
@@ -21,14 +51,31 @@ func NewGame() *Game {
 		DistantSystemDeck: []int{9, 10, 11},
 		Empire:            []*SystemCard{Systems[1]},
 		Techs:             make(map[int]bool),
+		NextStatus:        make(chan *Status),
+		NextPrompt:        make(chan *Prompt),
+		NextChoice:        make(chan *Choice),
+		Ready:             make(chan bool),
 	}
 	shuffle(g.EventDeck)
 	shuffle(g.NearSystemDeck)
 	shuffle(g.DistantSystemDeck)
 
-	g.calculateProduction()
+	g.State = StartState
 
 	return g
+}
+
+func (g *Game) Run() {
+	for {
+		s := g.State
+		if s == EndState {
+			g.NextStatus <- nil
+			g.NextPrompt <- nil
+			return
+		}
+		g.State = handlers[s](g)
+		g.Ready <- true
+	}
 }
 
 func (g *Game) calculateProduction() {
@@ -66,4 +113,43 @@ func (g *Game) collect() {
 	if g.WealthStorage > 5 {
 		g.WealthStorage = 5
 	}
+}
+
+func handleStart(g *Game) GameState {
+	g.calculateProduction()
+	if g.mayExploreDistantSystems() {
+		return SystemChoiceState
+	}
+
+	var id int
+	id, g.NearSystemDeck = Draw(g.NearSystemDeck)
+	sc := Systems[id]
+	g.Logf("Explored %s", sc.Name)
+	g.Explored = append(g.Explored, sc)
+
+	choices := make([]Choice, len(g.Explored)+1)
+	for i, sc := range g.Explored {
+		choices[i] = Choice{
+			Key:  fmt.Sprintf("%s", sc.ID),
+			Name: fmt.Sprintf("Attack %s", sc.Name),
+		}
+	}
+	choices = append(choices, Choice{"B", "Bide your time"})
+
+	g.Prompt = &Prompt{
+		State:   g.State,
+		Message: "Select a system to attack, or bide your time.",
+		Choices: choices,
+	}
+
+	return AttackState
+}
+
+func handleAttack(g *Game) GameState {
+	g.Log("Ending game...")
+	return EndState
+}
+
+func (g *Game) mayExploreDistantSystems() bool {
+	return false
 }

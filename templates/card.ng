@@ -15,6 +15,9 @@
             <div ng-if="card.Wealth">
                 Wealth: {{card.Wealth}}
             </div>
+            <div ng-if="card.VPs">
+                Victory Points: {{card.VPs}}
+            </div>
         </md-card-content>
     </md-card>
 </md-grid-tile>

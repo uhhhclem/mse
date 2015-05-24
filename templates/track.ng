@@ -1,15 +1,21 @@
-<md-grid-list 
-    class="track" 
-    md-cols="6" 
-    md-rows="1" 
-    md-row-height="2:1"
-    md-gutter="2px">
-  <md-grid-tile
-      ng-repeat="v in [0, 1, 2, 3, 4, 5] track by $index">
-      <md-card 
-          style="height:50px; width:50px" 
-          ng-class="{'track-tile': v!=value, 'current-value': v==value}">
-        <h2 style="text-align: center">{{v}}</h2>
-      </md-card>
-  </md-grid-tile>
-</md-grid-list>
+<div layout="row" class="{{t.cls}}" >
+    <div flex="10">
+      {{t.name}}
+    </div>
+    <md-grid-list 
+        class="track" 
+        flex
+        md-cols="6" 
+        md-rows="1" 
+        md-row-height="60px"
+        md-gutter="2px">
+      <md-grid-tile
+          ng-repeat="v in [0, 1, 2, 3, 4, 5]">
+          <md-card 
+              style="height:30px; width:30px" 
+              ng-class="{'track-tile': v!=t.value, 'current-value': v==t.value}">
+            <div style="text-align: center">{{v}}</div>
+          </md-card>
+      </md-grid-tile>
+    </md-grid-list>
+<div>

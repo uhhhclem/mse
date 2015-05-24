@@ -1,6 +1,7 @@
 package mse
 
 type Board struct {
+	State            string
 	MetalProduction  int
 	WealthProduction int
 	MetalStorage     int
@@ -20,8 +21,19 @@ type TechDisplay struct {
 	Owned   bool
 }
 
+type StatusResponse struct {
+	Status
+	End bool
+}
+
+type PromptResponse struct {
+	Prompt
+	End bool
+}
+
 func (g *Game) GetBoard() *Board {
 	b := &Board{
+		State:            string(g.State),
 		MetalProduction:  g.MetalProduction,
 		WealthProduction: g.WealthProduction,
 		MetalStorage:     g.MetalStorage,

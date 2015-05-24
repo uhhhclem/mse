@@ -43,65 +43,76 @@
 </head>
 <body ng-app="mseApp" ng-controller="mseCtrl">
 
-  <div layout="row">
-    <div layout="column" flex="5"></div>
-
-    <div layout="column" flex="45">
-      <md-toolbar class="md-primary md-toolbar-tools">Resources</md-toolbar>
-      <div class="metal" ng-repeat="value in [board.MetalStorage]">
-        <md-subheader>Metal Storage</md-subheader>
-        <ng-include src="'templates/track.ng'"/>
-      </div>
-      
-      <div class="wealth" ng-repeat="value in [board.WealthStorage]">
-        <md-subheader>Wealth Storage</md-subheader>
-        <ng-include src="'templates/track.ng'"/>
-      </div>
-      
-      <div class="military" ng-repeat="value in [board.MilitaryStrength]">
-        <md-subheader>Military Strength</md-subheader>
-        <ng-include src="'templates/track.ng'"/>
-      </div>
-      
-      <div flex>
-          <md-toolbar class="md-primary md-toolbar-tools">Technologies</md-toolbar>
-          <table style="width: 100%">
-            <col width="50%"/>
-            <col width="50%"/>
-            <tr ng-repeat="idx in [0, 1, 2, 3]">
-              <td style="width: 50%" ng-repeat="tech in [board.Gen1Techs[idx], board.Gen2Techs[idx]]">
-                <ng-include src="'templates/tech.ng'" />
-              </td>
-            </tr>
-          </table>
-      </div>
-
-    </div>
+  <div layout="column">
     
-    <div layout="column" flex="5"></div>
-    
-    <div layout="column" flex="45">
-      <div>
-        <md-toolbar class="md-primary md-toolbar-tools">Empire</md-toolbar>
+    <md-content layout="row" flex="80">
+      <div layout="column" flex="5"></div>
+  
+      <div layout="column" flex="45">
+        <md-toolbar class="md-primary md-toolbar-tools">Resources</md-toolbar>
+
+        <div >
+          <ng-include 
+            src="'templates/track.ng'"
+            ng-repeat="t in [metalTrack, wealthTrack, militaryTrack] track by $index"/>
+        </div>
         
-        <md-grid-list md-cols="3" md-row-height="1:1">
-          <ng-include ng-repeat="card in board.Empire track by ID" src="'templates/card.ng'"/>
-        </md-grid-list >
-      </div>
-      
-      <div>
-        <md-toolbar class="md-primary md-toolbar-tools">Explored</md-toolbar>
-      </div>
-      
-      <div>
-        <md-toolbar class="md-primary md-toolbar-tools">Event Info</md-toolbar>
-      </div>
-    </div>
-    
-  </div>
 
-  <code>
-    {{board}}
-  </code>
+        <div>
+            <md-toolbar class="md-primary md-toolbar-tools">Technologies</md-toolbar>
+            <table style="width: 100%">
+              <col width="50%"/>
+              <col width="50%"/>
+              <tr ng-repeat="idx in [0, 1, 2, 3]">
+                <td style="width: 50%" ng-repeat="tech in [board.Gen1Techs[idx], board.Gen2Techs[idx]] track by $index">
+                  <ng-include src="'templates/tech.ng'" />
+                </td>
+              </tr>
+            </table>
+        </div>
+  
+      </div>
+      
+      <div layout="column" flex="5"></div>
+      
+      <div layout="column" flex="45">
+        <div>
+          <md-toolbar class="md-primary md-toolbar-tools">Empire</md-toolbar>
+          
+          <md-grid-list md-cols="3" md-row-height="1:1">
+            <ng-include ng-repeat="card in board.Empire track by ID" src="'templates/card.ng'"/>
+          </md-grid-list >
+        </div>
+        
+        <div>
+          <md-toolbar class="md-primary md-toolbar-tools">Explored</md-toolbar>
+          <md-grid-list md-cols="3" md-row-height="1:1">
+            <ng-include ng-repeat="card in board.Explored track by ID" src="'templates/card.ng'"/>
+          </md-grid-list >
+        </div>
+        
+        <div>
+          <md-toolbar class="md-primary md-toolbar-tools">Event Info</md-toolbar>
+        </div>
+      </div>
+      
+    </div>
+
+  </md-content>
+
+  <md-content flex="20">
+    <md-subheader>Prompt</md-subheader>
+    <div>
+      {{prompt}}
+    </div>
+    <md-subheader>Status</md-subheader>
+    <div>
+      {{status}}
+    </div>
+    <md-subheader>Board</md-subheader>
+    <div>
+      {{board}}
+    </div>
+  </md-content>
 
 </body>
