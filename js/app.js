@@ -1,6 +1,6 @@
 var mseApp = angular.module('mseApp', ['ngMaterial']);
 
-mseApp.controller('mseCtrl', function($scope, $http){
+mseApp.controller('mseCtrl', function($scope, $http, $mdSidenav){
     
     $scope.status = [];
     
@@ -63,6 +63,14 @@ mseApp.controller('mseCtrl', function($scope, $http){
                 console.log('error');
                 console.log(d)
             });
+    };
+
+    $scope.showBoard = function() {
+        $mdSidenav('board').toggle();
+    };
+    
+    $scope.hideBoard = function() {
+        $mdSidenav('board').close();
     };
 
     $http.get('/api/newGame').success(function(){

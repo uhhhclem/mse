@@ -87,7 +87,7 @@
         <div>
           <md-toolbar class="md-primary md-toolbar-tools">Explored</md-toolbar>
           <md-grid-list md-cols="3" md-row-height="1:1">
-            <ng-include ng-repeat="card in board.Explored track by ID" src="'templates/card.ng'"/>
+            <ng-include ng-repeat="card in board.Explored track by card.ID" src="'templates/card.ng'"/>
           </md-grid-list >
         </div>
         
@@ -100,7 +100,7 @@
 
   </md-content>
 
-  <md-content flex="20">
+  <md-content flex="20" layout-padding>
     <md-subheader>Prompt</md-subheader>
     <div>
       {{prompt.Message}}
@@ -112,10 +112,22 @@
     <div ng-repeat="s in status">
       {{s.Message}}
     </div>
+    <md-button ng-click="showBoard()" class="md-primary">
+        Board
+    </md-button>
     <md-subheader>Board</md-subheader>
-    <div>
-      {{board}}
-    </div>
+
   </md-content>
 
+    <md-sidenav class="md-sidenav-right md-whiteframe-z2" md-component-id="board">
+      <md-toolbar class="md-theme-light">
+        <h1 class="md-toolbar-tools">Board</h1>
+      </md-toolbar>
+      <md-content layout-padding>
+        {{board}}
+        <md-button ng-click="hideBoard()" class="md-primary">
+          Hide
+        </md-button>
+      </md-content>
+    </md-sidenav>
 </body>

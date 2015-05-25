@@ -11,6 +11,9 @@ const (
 	SystemChoiceState           = "SystemChoice"
 	AttackState                 = "Attack"
 	CollectState                = "Collect"
+	ChooseBuildState = "ChooseBuild"
+	DoBuildState = "DoBuild"
+	EventState = "Event"
 	EndState                    = "End"
 )
 
@@ -23,6 +26,9 @@ func init() {
 		StartState:   handleStart,
 		AttackState:  handleAttack,
 		CollectState: handleCollect,
+		ChooseBuildState: handleChooseBuild,
+		DoBuildState: handleDoBuild,
+		EventState: handleEvent,
 	}
 }
 
@@ -61,6 +67,8 @@ func NewGame() *Game {
 	shuffle(g.EventDeck)
 	shuffle(g.NearSystemDeck)
 	shuffle(g.DistantSystemDeck)
+
+	g.calculateProduction()
 
 	g.State = StartState
 
@@ -117,8 +125,8 @@ func (g *Game) collect() {
 	}
 }
 
+
 func handleStart(g *Game) GameState {
-	g.calculateProduction()
 	if g.mayExploreDistantSystems() {
 		return SystemChoiceState
 	}
@@ -138,12 +146,7 @@ func handleStart(g *Game) GameState {
 	}
 	choices = append(choices, &Choice{"B", "Bide your time"})
 
-	g.Prompt = &Prompt{
-		State:   g.State,
-		Message: "Select a system to attack, or bide your time.",
-		Choices: choices,
-	}
-	go func() { g.NextPrompt <- g.Prompt }()
+	g.SendPrompt("Select a system to attack, or bide your time.", choices)
 
 	return AttackState
 }
@@ -152,7 +155,7 @@ func handleAttack(g *Game) GameState {
 	c := <-g.NextChoice
 	if c.Key == "B" {
 		g.Log("Biding time...")
-		return EndState
+		return CollectState
 	}
 	w := Systems[c.Key]
 	g.Logf("Attacking %s...", w.Name)
@@ -178,8 +181,51 @@ func handleAttack(g *Game) GameState {
 }
 
 func handleCollect(g *Game) GameState {
-	g.Log("CollectState not implemented, ending...")
-	return EndState
+	g.calculateProduction()
+	metal, wealth := g.MetalStorage, g.WealthStorage
+	g.collect()
+	g.Logf("Collected %d metal and %d wealth.", g.MetalStorage - metal,
+			g.WealthStorage - wealth)
+	return ChooseBuildState
+}
+
+const (
+	BuildDone = "Done"
+	BuildMilitary = "Military"
+)
+
+func handleChooseBuild(g *Game) GameState {
+	var choices = []*Choice{{Key: BuildDone, Name: "Done"}}
+	if g.WealthStorage > 0 && g.MetalStorage > 0 && g.MilitaryStrength < 6 {
+		choices = append(choices, &Choice{
+			Key: BuildMilitary, 
+			Name: "Increase military strength by 1 (1 wealth, 1 metal)",
+		})
+	}
+	
+	g.SendPrompt("Select build:", choices)
+	
+	return DoBuildState
+}
+
+func handleDoBuild(g *Game) GameState {
+	c := <-g.NextChoice
+	switch c.Key {
+	case BuildDone:
+	  return EventState
+	case BuildMilitary:
+	  g.MilitaryStrength += 1
+	  g.MetalStorage -= 1
+	  g.WealthStorage -= 1
+	default:
+	  g.Logf("Unknown build key %q", c.Key)
+	}
+	return ChooseBuildState
+}
+
+func handleEvent(g *Game) GameState {
+	g.Log("Event state not implemented.")
+	return StartState
 }
 
 func (g *Game) mayExploreDistantSystems() bool {
@@ -189,9 +235,19 @@ func (g *Game) mayExploreDistantSystems() bool {
 func (g *Game) exploredToEmpire(sc *SystemCard) {
 	for i := range g.Explored {
 		if g.Explored[i] == sc {
-			g.Explored = append(g.Empire[:i], g.Empire[i+1:]...)
+			g.Explored = append(g.Explored[:i], g.Explored[i+1:]...)
 			break
 		}
 	}
 	g.Empire = append(g.Empire, sc)
+}
+
+func (g *Game) empireToExplored(sc *SystemCard) {
+	for i := range g.Empire {
+		if g.Empire[i] == sc {
+			g.Empire = append(g.Empire[:i], g.Empire[i+1:]...)
+			break
+		}
+	}
+	g.Explored = append(g.Explored, sc)
 }
