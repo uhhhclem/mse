@@ -1,29 +1,29 @@
 package mse
 
 const (
-	CapitalShips = iota + 1
-	RobotWorkers
-	HyperTelevision
-	InterspeciesCommerce
-	ForwardStarbases
-	PlanetaryDefenses
-	InterstellarDiplomacy
-	InterstellarBanking
+	CapitalShips          = "CS"
+	RobotWorkers          = "RW"
+	HyperTelevision       = "HT"
+	InterspeciesCommerce  = "IC"
+	ForwardStarbases      = "FS"
+	PlanetaryDefenses     = "PD"
+	InterstellarDiplomacy = "ID"
+	InterstellarBanking   = "IB"
 )
 
 type Tech struct {
-	ID        int
+	ID        string
 	Name      string
 	Ability   string
 	Cost      int
-	DependsOn int
-	Enables   int
+	DependsOn string
+	Enables   string
 }
 
-var Techs map[int]Tech
+var Techs map[string]Tech
 
 func init() {
-	Techs = map[int]Tech{
+	Techs = map[string]Tech{
 		CapitalShips: {
 			Name:    "Capital Ships",
 			Ability: "Advance beyond military strength 3",

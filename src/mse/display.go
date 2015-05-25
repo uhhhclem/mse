@@ -14,7 +14,7 @@ type Board struct {
 }
 
 type TechDisplay struct {
-	ID      int
+	ID      string
 	Cost    int
 	Name    string
 	Ability string
@@ -57,7 +57,7 @@ func (g *Game) GetBoard() *Board {
 	return b
 }
 
-func (g *Game) getTechDisplay(id int) TechDisplay {
+func (g *Game) getTechDisplay(id string) TechDisplay {
 	t := Techs[id]
 	return TechDisplay{
 		Name:    t.Name,

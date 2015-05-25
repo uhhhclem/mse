@@ -2,12 +2,13 @@ package mse
 
 import (
 	"fmt"
+	"strings"
 )
 
 type Prompt struct {
 	State   GameState
 	Message string
-	Choices []Choice
+	Choices []*Choice
 }
 
 type Choice struct {
@@ -34,4 +35,14 @@ func (g *Game) Log(m string) {
 // Logf sends a formatted Status message.
 func (g *Game) Logf(f string, args ...interface{}) {
 	g.Log(fmt.Sprintf(f, args...))
+}
+
+func (g *Game) MakeChoice(key string) error {
+	for _, c := range g.Prompt.Choices {
+		if strings.ToLower(key) == strings.ToLower(c.Key) {
+			go func() { g.NextChoice <- c }()
+			return nil
+		}
+	}
+	return fmt.Errorf("%q is not a valid choice.", key)
 }

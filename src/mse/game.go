@@ -10,6 +10,7 @@ const (
 	StartState        GameState = "StartOfTurn"
 	SystemChoiceState           = "SystemChoice"
 	AttackState                 = "Attack"
+	CollectState                = "Collect"
 	EndState                    = "End"
 )
 
@@ -19,8 +20,9 @@ var handlers map[GameState]stateHandler
 
 func init() {
 	handlers = map[GameState]stateHandler{
-		StartState:  handleStart,
-		AttackState: handleAttack,
+		StartState:   handleStart,
+		AttackState:  handleAttack,
+		CollectState: handleCollect,
 	}
 }
 
@@ -30,7 +32,7 @@ type Game struct {
 	Empire                                       []*SystemCard
 	Explored                                     []*SystemCard
 	ActiveEvent                                  *EventCard
-	Techs                                        map[int]bool
+	Techs                                        map[string]bool
 	UsedInterstellarDiplomacy                    bool
 	MetalStorage                                 int
 	WealthStorage                                int
@@ -46,11 +48,12 @@ type Game struct {
 
 func NewGame() *Game {
 	g := &Game{
-		EventDeck:         []int{1, 2, 3, 4, 5, 6, 7, 8},
-		NearSystemDeck:    []int{2, 3, 4, 5, 6, 7, 8},
-		DistantSystemDeck: []int{9, 10, 11},
-		Empire:            []*SystemCard{Systems[1]},
-		Techs:             make(map[int]bool),
+		EventDeck:         []string{"1", "2", "3", "4", "5", "6", "7", "8"},
+		NearSystemDeck:    []string{"2", "3", "4", "5", "6", "7", "8"},
+		DistantSystemDeck: []string{"9", "10", "11"},
+		Empire:            []*SystemCard{Systems["1"]},
+		MilitaryStrength:  1,
+		Techs:             make(map[string]bool),
 		NextStatus:        make(chan *Status),
 		NextPrompt:        make(chan *Prompt),
 		NextChoice:        make(chan *Choice),
@@ -121,35 +124,75 @@ func handleStart(g *Game) GameState {
 		return SystemChoiceState
 	}
 
-	var id int
+	var id string
 	id, g.NearSystemDeck = Draw(g.NearSystemDeck)
 	sc := Systems[id]
 	g.Logf("Explored %s", sc.Name)
 	g.Explored = append(g.Explored, sc)
 
-	choices := make([]Choice, len(g.Explored)+1)
-	for i, sc := range g.Explored {
-		choices[i] = Choice{
-			Key:  fmt.Sprintf("%s", sc.ID),
+	choices := make([]*Choice, 0, len(g.Explored)+1)
+	for _, sc := range g.Explored {
+		choices = append(choices, &Choice{
+			Key:  sc.ID,
 			Name: fmt.Sprintf("Attack %s", sc.Name),
-		}
+		})
 	}
-	choices = append(choices, Choice{"B", "Bide your time"})
+	choices = append(choices, &Choice{"B", "Bide your time"})
 
 	g.Prompt = &Prompt{
 		State:   g.State,
 		Message: "Select a system to attack, or bide your time.",
 		Choices: choices,
 	}
+	go func() { g.NextPrompt <- g.Prompt }()
 
 	return AttackState
 }
 
 func handleAttack(g *Game) GameState {
-	g.Log("Ending game...")
+	c := <-g.NextChoice
+	if c.Key == "B" {
+		g.Log("Biding time...")
+		return EndState
+	}
+	w := Systems[c.Key]
+	g.Logf("Attacking %s...", w.Name)
+
+	roll := Roll()
+	success := roll+g.MilitaryStrength >= w.Resistance
+	result := map[bool]string{
+		true:  "success",
+		false: "failed",
+	}[success]
+
+	if success {
+		g.exploredToEmpire(w)
+	}
+	g.Logf("Resistance = %d, military strength = %d, roll = %d...%s!",
+		w.Resistance, g.MilitaryStrength, roll, result)
+	if !success && g.MilitaryStrength > 0 {
+		g.MilitaryStrength -= 1
+		g.Logf("Military strength reduced to %d.", g.MilitaryStrength)
+	}
+
+	return CollectState
+}
+
+func handleCollect(g *Game) GameState {
+	g.Log("CollectState not implemented, ending...")
 	return EndState
 }
 
 func (g *Game) mayExploreDistantSystems() bool {
 	return false
+}
+
+func (g *Game) exploredToEmpire(sc *SystemCard) {
+	for i := range g.Explored {
+		if g.Explored[i] == sc {
+			g.Explored = append(g.Empire[:i], g.Empire[i+1:]...)
+			break
+		}
+	}
+	g.Empire = append(g.Empire, sc)
 }

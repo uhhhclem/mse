@@ -53,6 +53,18 @@ mseApp.controller('mseCtrl', function($scope, $http){
         })
     };
 
+    $scope.makeChoice = function(key) {
+        $http.post('/api/choice', {Key: key})
+            .success(function(d){
+                console.log('success');
+                console.log(d);
+            })
+            .error(function(d){
+                console.log('error');
+                console.log(d)
+            });
+    };
+
     $http.get('/api/newGame').success(function(){
         $scope.getBoard();
         $scope.getStatus();

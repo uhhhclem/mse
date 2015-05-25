@@ -26,7 +26,7 @@ const (
 )
 
 type EventCard struct {
-	ID          int
+	ID          string
 	Name        CardName
 	Year1Effect string
 	Year2Effect string
@@ -34,14 +34,14 @@ type EventCard struct {
 }
 
 var events = []EventCard{
-	{1, Asteroid, "+1 Wealth", "+1 Wealth", ""},
-	{2, DerelictShip, "Gain 1 Metal", "Gain 1 Metal", ""},
-	{3, LargeInvasionForce, "Force +2", "Force +3", InvasionMod},
-	{4, PeaceAndQuiet, "No event", "No event", ""},
-	{5, Revolt, "Force +1", "Force +2", RevoltMod},
-	{6, Revolt, "Force +1", "Force +3", RevoltMod},
-	{7, SmallInvasionForce, "Force +1", "Force +2", InvasionMod},
-	{8, Strike, "No resources next turn", "No resources next turn", StrikeMod},
+	{"1", Asteroid, "+1 Wealth", "+1 Wealth", ""},
+	{"2", DerelictShip, "Gain 1 Metal", "Gain 1 Metal", ""},
+	{"3", LargeInvasionForce, "Force +2", "Force +3", InvasionMod},
+	{"4", PeaceAndQuiet, "No event", "No event", ""},
+	{"5", Revolt, "Force +1", "Force +2", RevoltMod},
+	{"6", Revolt, "Force +1", "Force +3", RevoltMod},
+	{"7", SmallInvasionForce, "Force +1", "Force +2", InvasionMod},
+	{"8", Strike, "No resources next turn", "No resources next turn", StrikeMod},
 }
 
 type SystemType string
@@ -53,7 +53,7 @@ const (
 )
 
 type SystemCard struct {
-	ID         int
+	ID         string
 	Name       CardName
 	Type       SystemType
 	Resistance int
@@ -63,55 +63,55 @@ type SystemCard struct {
 }
 
 var systems = []SystemCard{
-	{ID: 1, Name: "Home World", Metal: 1, Wealth: 1},
-	{ID: 2, Name: "Cygnus", Resistance: 5, Wealth: 1, VPs: 1},
-	{ID: 3, Name: "Epsilon Eridani", Resistance: 8, VPs: 1},
-	{ID: 4, Name: "Procyon", Resistance: 7, Wealth: 1, VPs: 1},
-	{ID: 5, Name: "Proxima", Resistance: 6, Metal: 1, VPs: 1},
-	{ID: 6, Name: "Sirius", Resistance: 6, VPs: 1},
-	{ID: 7, Name: "Wolf 359", Resistance: 5, Metal: 1, VPs: 1},
-	{ID: 8, Name: "Tau Ceti", Resistance: 4, VPs: 1},
-	{ID: 9, Name: "Canopus", Resistance: 9, Wealth: 1, VPs: 2},
-	{ID: 10, Name: "Galaxy's Edge", Resistance: 10, VPs: 3},
-	{ID: 11, Name: "Polaris", Resistance: 9, VPs: 2},
+	{ID: "1", Name: "Home World", Metal: 1, Wealth: 1},
+	{ID: "2", Name: "Cygnus", Resistance: 5, Wealth: 1, VPs: 1},
+	{ID: "3", Name: "Epsilon Eridani", Resistance: 8, VPs: 1},
+	{ID: "4", Name: "Procyon", Resistance: 7, Wealth: 1, VPs: 1},
+	{ID: "5", Name: "Proxima", Resistance: 6, Metal: 1, VPs: 1},
+	{ID: "6", Name: "Sirius", Resistance: 6, VPs: 1},
+	{ID: "7", Name: "Wolf 359", Resistance: 5, Metal: 1, VPs: 1},
+	{ID: "8", Name: "Tau Ceti", Resistance: 4, VPs: 1},
+	{ID: "9", Name: "Canopus", Resistance: 9, Wealth: 1, VPs: 2},
+	{ID: "10", Name: "Galaxy's Edge", Resistance: 10, VPs: 3},
+	{ID: "11", Name: "Polaris", Resistance: 9, VPs: 2},
 }
 
 var (
-	Systems           map[int]*SystemCard
-	Events            map[int]*EventCard
-	EventDeck         []int
-	NearSystemDeck    []int
-	DistantSystemDeck []int
+	Systems           map[string]*SystemCard
+	Events            map[string]*EventCard
+	EventDeck         []string
+	NearSystemDeck    []string
+	DistantSystemDeck []string
 )
 
-type Deck []int
+type Deck []string
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
 
 	for _, c := range Systems {
 		switch {
-		case c.ID == 1:
+		case c.ID == "1":
 			c.Type = StartingSystem
-		case c.ID > 1 && c.ID < 9:
-			c.Type = NearSystem
-		case c.ID > 9:
+		case c.ID == "10" || c.ID == "11" || c.ID == "12":
 			c.Type = DistantSystem
+		default:
+			c.Type = NearSystem
 		}
 	}
 
-	Events = make(map[int]*EventCard)
+	Events = make(map[string]*EventCard)
 	for i := range events {
 		Events[events[i].ID] = &events[i]
 	}
 
-	Systems = make(map[int]*SystemCard)
+	Systems = make(map[string]*SystemCard)
 	for i := range systems {
 		Systems[systems[i].ID] = &systems[i]
 	}
 }
 
-func shuffle(deck []int) {
+func shuffle(deck []string) {
 	for i := range deck {
 		n := len(deck) - i
 		k := rand.Intn(n)
@@ -119,7 +119,11 @@ func shuffle(deck []int) {
 	}
 }
 
-func Draw(deck []int) (int, []int) {
+func Draw(deck []string) (string, []string) {
 	card := deck[0]
 	return card, deck[1:]
+}
+
+func Roll() int {
+	return rand.Intn(6) + 1
 }

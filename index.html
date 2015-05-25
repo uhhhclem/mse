@@ -80,7 +80,7 @@
           <md-toolbar class="md-primary md-toolbar-tools">Empire</md-toolbar>
           
           <md-grid-list md-cols="3" md-row-height="1:1">
-            <ng-include ng-repeat="card in board.Empire track by ID" src="'templates/card.ng'"/>
+            <ng-include ng-repeat="card in board.Empire track by card.ID" src="'templates/card.ng'"/>
           </md-grid-list >
         </div>
         
@@ -103,11 +103,14 @@
   <md-content flex="20">
     <md-subheader>Prompt</md-subheader>
     <div>
-      {{prompt}}
+      {{prompt.Message}}
+    </div>
+    <div ng-repeat="c in prompt.Choices">
+      <a href="#" ng-click="makeChoice(c.Key)">{{c.Name}}</a>
     </div>
     <md-subheader>Status</md-subheader>
-    <div>
-      {{status}}
+    <div ng-repeat="s in status">
+      {{s.Message}}
     </div>
     <md-subheader>Board</md-subheader>
     <div>

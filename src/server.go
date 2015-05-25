@@ -53,11 +53,25 @@ func apiGetPrompt(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func apiPostChoice(w http.ResponseWriter, r *http.Request) {
+	req := struct{ Key string }{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	} else if err := game.MakeChoice(req.Key); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
 func main() {
 	http.HandleFunc("/api/newGame", apiNewGame)
 	http.HandleFunc("/api/board", apiGetBoard)
 	http.HandleFunc("/api/status", apiGetStatus)
 	http.HandleFunc("/api/prompt", apiGetPrompt)
+	http.HandleFunc("/api/choice", apiPostChoice)
 	http.Handle("/", http.FileServer(http.Dir("./..")))
 
 	http.ListenAndServe(":8080", nil)
