@@ -52,7 +52,6 @@ func NewGame() *Game {
 		NearSystemDeck:    []string{"2", "3", "4", "5", "6", "7", "8"},
 		DistantSystemDeck: []string{"9", "10", "11"},
 		Empire:            []*SystemCard{Systems["1"]},
-		MilitaryStrength:  1,
 		Techs:             make(map[string]bool),
 		NextStatus:        make(chan *Status),
 		NextPrompt:        make(chan *Prompt),
