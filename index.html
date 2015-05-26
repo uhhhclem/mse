@@ -5,14 +5,21 @@
 
   <style type="text/css">
 .metal .track-tile {
-  background-color: #f5f5f5; }
+  background-color: #e0e0e0; }
 .wealth .track-tile {
   background-color: #ffff8d; }
 .military .track-tile {
   background-color: #84ffff; }
-.current-value {
-  color: white;
-  background-color: black;
+
+.track-tile {
+  height: 30px;
+  width: 30px;
+}
+
+.over-value {
+  height: 30px;
+  width: 30px;
+  background-color: white;  
 }
 
 .card {
@@ -53,28 +60,31 @@
       <div layout="column" flex="5"></div>
   
       <div layout="column" flex="45">
+        
         <md-toolbar class="md-primary md-toolbar-tools">Resources</md-toolbar>
 
-        <div >
-          <ng-include 
-            src="'templates/track.ng'"
-            ng-repeat="t in [metalTrack, wealthTrack, militaryTrack] track by $index"/>
-        </div>
-        
-
-        <div>
-            <md-toolbar class="md-primary md-toolbar-tools">Technologies</md-toolbar>
-            <table style="width: 100%">
-              <col width="50%"/>
-              <col width="50%"/>
-              <tr ng-repeat="idx in [0, 1, 2, 3]">
-                <td style="width: 50%" ng-repeat="tech in [board.Gen1Techs[idx], board.Gen2Techs[idx]] track by $index">
-                  <ng-include src="'templates/tech.ng'" />
-                </td>
-              </tr>
-            </table>
-        </div>
+        <div layout="column">
+          
+          <div flex="25" layout="column" layout-align="center">
+            <ng-include 
+              src="'templates/track.ng'"
+              ng-repeat="t in [metalTrack, wealthTrack, militaryTrack] track by $index"/>
+          </div>
+          
   
+          <div flex>
+              <md-toolbar class="md-primary md-toolbar-tools">Technologies</md-toolbar>
+              <table style="width: 100%">
+                <col width="50%"/>
+                <col width="50%"/>
+                <tr ng-repeat="idx in [0, 1, 2, 3]">
+                  <td style="width: 50%" ng-repeat="tech in [board.Gen1Techs[idx], board.Gen2Techs[idx]] track by $index">
+                    <ng-include src="'templates/tech.ng'" />
+                  </td>
+                </tr>
+              </table>
+          </div>
+        </div>  
       </div>
       
       <div layout="column" flex="5"></div>

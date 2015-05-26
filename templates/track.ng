@@ -1,21 +1,14 @@
 <div layout="row" class="{{t.cls}}" >
-    <div flex="10">
-      {{t.name}}
+    <div flex="20">
+      <div style="padding-top: 1em">
+        {{t.name}}
+      </div>
     </div>
-    <md-grid-list 
-        class="track" 
-        flex
-        md-cols="6" 
-        md-rows="1" 
-        md-row-height="60px"
-        md-gutter="2px">
-      <md-grid-tile
+    <div flex="50 class="track layout="row">
+      <md-card 
+          ng-class="{'track-tile': v<=t.value, 'over-value': v>t.value}"
           ng-repeat="v in [0, 1, 2, 3, 4, 5]">
-          <md-card 
-              style="height:30px; width:30px" 
-              ng-class="{'track-tile': v!=t.value, 'current-value': v==t.value}">
-            <div style="text-align: center">{{v}}</div>
-          </md-card>
-      </md-grid-tile>
-    </md-grid-list>
+      </md-card>
+    </div>
+    <div flex/>
 <div>
