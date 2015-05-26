@@ -9,12 +9,12 @@ type EventName string
 
 const (
 	Asteroid           EventName = "Asteroid"
-	DerelictShip                = "Derelict Ship"
-	LargeInvasionForce          = "Large Invasion Force"
-	PeaceAndQuiet               = "Peace & Quiet"
-	Revolt                      = "Revolt"
-	SmallInvasionForce          = "Small Invasion Force"
-	Strike                      = "Strike"
+	DerelictShip                 = "Derelict Ship"
+	LargeInvasionForce           = "Large Invasion Force"
+	PeaceAndQuiet                = "Peace & Quiet"
+	Revolt                       = "Revolt"
+	SmallInvasionForce           = "Small Invasion Force"
+	Strike                       = "Strike"
 )
 
 type EventModifier string

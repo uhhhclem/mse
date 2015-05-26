@@ -7,19 +7,19 @@ import (
 type GameState string
 
 const (
-	StartState        GameState = "StartOfTurn"
-	SystemChoiceState           = "SystemChoice"
-	AttackState                 = "Attack"
-	CollectState                = "Collect"
-	ChooseBuildState            = "ChooseBuild"
-	DoBuildState                = "DoBuild"
-	EventState                  = "Event"
-	RevoltState = "Revolt"
-	SmallInvasionForceState = "SmallInvasionForce"
-	LargeInvasionForceState = "LargeInvasionForce"
-	WinState = "Win"
-	LoseState = "Lose"
-	EndState                    = "End"
+	StartState              GameState = "StartOfTurn"
+	SystemChoiceState                 = "SystemChoice"
+	AttackState                       = "Attack"
+	CollectState                      = "Collect"
+	ChooseBuildState                  = "ChooseBuild"
+	DoBuildState                      = "DoBuild"
+	EventState                        = "Event"
+	RevoltState                       = "Revolt"
+	SmallInvasionForceState           = "SmallInvasionForce"
+	LargeInvasionForceState           = "LargeInvasionForce"
+	WinState                          = "Win"
+	LoseState                         = "Lose"
+	EndState                          = "End"
 )
 
 type stateHandler func(*Game) GameState
@@ -37,17 +37,17 @@ var buildChoices map[string]string
 
 func init() {
 	handlers = map[GameState]stateHandler{
-		StartState:       handleStart,
-		AttackState:      handleAttack,
-		CollectState:     handleCollect,
-		ChooseBuildState: handleChooseBuild,
-		DoBuildState:     handleDoBuild,
-		EventState:       handleEvent,
-		RevoltState:	  handleRevolt,
+		StartState:              handleStart,
+		AttackState:             handleAttack,
+		CollectState:            handleCollect,
+		ChooseBuildState:        handleChooseBuild,
+		DoBuildState:            handleDoBuild,
+		EventState:              handleEvent,
+		RevoltState:             handleRevolt,
 		SmallInvasionForceState: handleSmallInvasionForce,
 		LargeInvasionForceState: handleLargeInvasionForce,
-		WinState: handleWin,
-		LoseState: handleLose,
+		WinState:                handleWin,
+		LoseState:               handleLose,
 	}
 
 	buildChoices = map[string]string{
@@ -61,7 +61,7 @@ func init() {
 
 type Game struct {
 	State                                        GameState
-	Year int
+	Year                                         int
 	NearSystemDeck, DistantSystemDeck, EventDeck Deck
 	Empire                                       []*SystemCard
 	Explored                                     []*SystemCard
@@ -85,7 +85,7 @@ func NewGame() *Game {
 		EventDeck:         []string{"1", "2", "3", "4", "5", "6", "7", "8"},
 		NearSystemDeck:    []string{"2", "3", "4", "5", "6", "7", "8"},
 		DistantSystemDeck: []string{"9", "10", "11"},
-		Year: 1,
+		Year:              1,
 		Empire:            []*SystemCard{Systems["1"]},
 		Techs:             make(map[string]bool),
 		NextStatus:        make(chan *Status),
@@ -95,7 +95,7 @@ func NewGame() *Game {
 	}
 	shuffle(g.EventDeck)
 	_, g.EventDeck = Draw(g.EventDeck)
-	
+
 	shuffle(g.NearSystemDeck)
 	shuffle(g.DistantSystemDeck)
 
@@ -293,7 +293,7 @@ func addChoice(choices []*Choice, key string) []*Choice {
 
 func handleDoBuild(g *Game) GameState {
 	c := <-g.NextChoice
-	
+
 	if t, ok := Techs[c.Key]; ok {
 		g.Techs[c.Key] = true
 		g.WealthStorage -= t.Cost
@@ -331,32 +331,31 @@ func handleEvent(g *Game) GameState {
 		_, g.EventDeck = Draw(g.EventDeck)
 		_, g.EventDeck = Draw(g.EventDeck)
 	}
-	
-	
+
 	var id string
 	id, g.EventDeck = Draw(g.EventDeck)
 	e := Events[id]
 	g.ActiveEvent = e
 	g.Logf("Drew event: %s", e.Name)
-	
+
 	var result string
-	switch g.ActiveEvent.Name{
-		case Asteroid:
-			result = g.doAsteroidEvent()
-		case PeaceAndQuiet:
-			result = g.doPeaceAndQuietEvent()
-		case DerelictShip:
-			result = g.doDerelictShipEvent()
-		case Strike:
-			result = g.doStrikeEvent()
-		case Revolt:
-			return RevoltState
-		case SmallInvasionForce:
-			return SmallInvasionForceState
-		case LargeInvasionForce:
-			return LargeInvasionForceState
-		default:
-			result = fmt.Sprintf("No handler defined for event %s", g.ActiveEvent.Name)
+	switch g.ActiveEvent.Name {
+	case Asteroid:
+		result = g.doAsteroidEvent()
+	case PeaceAndQuiet:
+		result = g.doPeaceAndQuietEvent()
+	case DerelictShip:
+		result = g.doDerelictShipEvent()
+	case Strike:
+		result = g.doStrikeEvent()
+	case Revolt:
+		return RevoltState
+	case SmallInvasionForce:
+		return SmallInvasionForceState
+	case LargeInvasionForce:
+		return LargeInvasionForceState
+	default:
+		result = fmt.Sprintf("No handler defined for event %s", g.ActiveEvent.Name)
 	}
 
 	g.Log(result)
