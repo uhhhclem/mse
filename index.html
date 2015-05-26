@@ -105,9 +105,22 @@
           </md-grid-list >
         </div>
         
-        <div>
-          <md-toolbar class="md-primary md-toolbar-tools">Event Info</md-toolbar>
-        </div>
+        <md-card ng-if="board.ActiveEvent">
+          <md-toolbar class="md-primary md-toolbar-tools">Event</md-toolbar>
+          <md-subheader>{{board.ActiveEvent.Name}}</md-subheader>
+          <md-content>
+            <div layout="column">
+              <div layout="row">
+                <div>Year 1:</div>
+                <div>{{board.ActiveEvent.Year1Effect}}</div>
+              </div>
+              <div layout="row">
+                <div>Year 2:</div>
+                <div>{{board.ActiveEvent.Year2Effect}}</div>
+              </div>
+            </div>
+          </md-content>
+        </md-card>
       </div>
       
     </div>

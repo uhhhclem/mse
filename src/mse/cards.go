@@ -5,10 +5,10 @@ import (
 	"time"
 )
 
-type CardName string
+type EventName string
 
 const (
-	Asteroid           CardName = "Asteroid"
+	Asteroid           EventName = "Asteroid"
 	DerelictShip                = "Derelict Ship"
 	LargeInvasionForce          = "Large Invasion Force"
 	PeaceAndQuiet               = "Peace & Quiet"
@@ -27,7 +27,7 @@ const (
 
 type EventCard struct {
 	ID          string
-	Name        CardName
+	Name        EventName
 	Year1Effect string
 	Year2Effect string
 	Modifier    EventModifier
@@ -52,14 +52,17 @@ const (
 	DistantSystem             = "DistantSystem"
 )
 
+type SystemName string
+
 type SystemCard struct {
 	ID         string
-	Name       CardName
+	Name       SystemName
 	Type       SystemType
 	Resistance int
 	Metal      int
 	Wealth     int
 	VPs        int
+	Revolted   bool
 }
 
 var systems = []SystemCard{

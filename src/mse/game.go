@@ -14,6 +14,11 @@ const (
 	ChooseBuildState            = "ChooseBuild"
 	DoBuildState                = "DoBuild"
 	EventState                  = "Event"
+	RevoltState = "Revolt"
+	SmallInvasionForceState = "SmallInvasionForce"
+	LargeInvasionForceState = "LargeInvasionForce"
+	WinState = "Win"
+	LoseState = "Lose"
 	EndState                    = "End"
 )
 
@@ -38,6 +43,11 @@ func init() {
 		ChooseBuildState: handleChooseBuild,
 		DoBuildState:     handleDoBuild,
 		EventState:       handleEvent,
+		RevoltState:	  handleRevolt,
+		SmallInvasionForceState: handleSmallInvasionForce,
+		LargeInvasionForceState: handleLargeInvasionForce,
+		WinState: handleWin,
+		LoseState: handleLose,
 	}
 
 	buildChoices = map[string]string{
@@ -51,6 +61,7 @@ func init() {
 
 type Game struct {
 	State                                        GameState
+	Year int
 	NearSystemDeck, DistantSystemDeck, EventDeck Deck
 	Empire                                       []*SystemCard
 	Explored                                     []*SystemCard
@@ -74,6 +85,7 @@ func NewGame() *Game {
 		EventDeck:         []string{"1", "2", "3", "4", "5", "6", "7", "8"},
 		NearSystemDeck:    []string{"2", "3", "4", "5", "6", "7", "8"},
 		DistantSystemDeck: []string{"9", "10", "11"},
+		Year: 1,
 		Empire:            []*SystemCard{Systems["1"]},
 		Techs:             make(map[string]bool),
 		NextStatus:        make(chan *Status),
@@ -82,6 +94,8 @@ func NewGame() *Game {
 		Ready:             make(chan bool),
 	}
 	shuffle(g.EventDeck)
+	_, g.EventDeck = Draw(g.EventDeck)
+	
 	shuffle(g.NearSystemDeck)
 	shuffle(g.DistantSystemDeck)
 
@@ -112,7 +126,7 @@ func (g *Game) calculateProduction() {
 		g.WealthProduction += sc.Wealth
 	}
 
-	if g.ActiveEvent == nil || g.ActiveEvent.Name == Strike {
+	if !g.isStrikeActive() {
 		return
 	}
 
@@ -125,21 +139,28 @@ func (g *Game) calculateProduction() {
 	}
 }
 
-func (g *Game) collect() {
-	g.MetalStorage += g.MetalProduction
+func (g *Game) addMetal(add int) int {
+	orig := g.MetalStorage
+	g.MetalStorage += add
 	if g.MetalStorage > 3 && !g.Techs[InterstellarDiplomacy] {
 		g.MetalStorage = 3
 	}
 	if g.MetalStorage > 5 {
 		g.MetalStorage = 5
 	}
-	g.WealthStorage += g.WealthProduction
+	return g.MetalStorage - orig
+}
+
+func (g *Game) addWealth(add int) int {
+	orig := g.WealthStorage
+	g.WealthStorage += add
 	if g.WealthStorage > 3 && !g.Techs[InterstellarDiplomacy] {
 		g.WealthStorage = 3
 	}
 	if g.WealthStorage > 5 {
 		g.WealthStorage = 5
 	}
+	return g.WealthStorage - orig
 }
 
 func handleStart(g *Game) GameState {
@@ -148,13 +169,24 @@ func handleStart(g *Game) GameState {
 	}
 
 	var id string
-	id, g.NearSystemDeck = Draw(g.NearSystemDeck)
-	sc := Systems[id]
-	g.Logf("Explored %s", sc.Name)
-	g.Explored = append(g.Explored, sc)
+	if len(g.NearSystemDeck) > 0 {
+		id, g.NearSystemDeck = Draw(g.NearSystemDeck)
+	} else if len(g.DistantSystemDeck) > 0 {
+		id, g.DistantSystemDeck = Draw(g.DistantSystemDeck)
+	}
+	if id != "" {
+		sc := Systems[id]
+		g.Logf("Explored %s", sc.Name)
+		g.Explored = append(g.Explored, sc)
+	} else {
+		g.Log("All systems explored")
+	}
 
 	choices := make([]*Choice, 0, len(g.Explored)+1)
 	for _, sc := range g.Explored {
+		if sc.Type == DistantSystem && !g.Techs[ForwardStarbases] {
+			continue
+		}
 		choices = append(choices, &Choice{
 			Key:  sc.ID,
 			Name: fmt.Sprintf("Attack %s", sc.Name),
@@ -198,10 +230,9 @@ func handleAttack(g *Game) GameState {
 
 func handleCollect(g *Game) GameState {
 	g.calculateProduction()
-	metal, wealth := g.MetalStorage, g.WealthStorage
-	g.collect()
-	g.Logf("Collected %d metal and %d wealth.", g.MetalStorage-metal,
-		g.WealthStorage-wealth)
+	metal := g.addMetal(g.MetalProduction)
+	wealth := g.addWealth(g.WealthProduction)
+	g.Logf("Collected %d metal and %d wealth.", metal, wealth)
 	return ChooseBuildState
 }
 
@@ -262,6 +293,7 @@ func addChoice(choices []*Choice, key string) []*Choice {
 
 func handleDoBuild(g *Game) GameState {
 	c := <-g.NextChoice
+	
 	if t, ok := Techs[c.Key]; ok {
 		g.Techs[c.Key] = true
 		g.WealthStorage -= t.Cost
@@ -288,8 +320,61 @@ func handleDoBuild(g *Game) GameState {
 }
 
 func handleEvent(g *Game) GameState {
-	g.Log("Event state not implemented.")
+	if len(g.EventDeck) == 0 {
+		g.Log("End of Year 1.")
+		if g.Year == 2 {
+			return WinState
+		}
+		g.Year += 1
+		g.EventDeck = []string{"1", "2", "3", "4", "5", "6", "7", "8"}
+		shuffle(g.EventDeck)
+		_, g.EventDeck = Draw(g.EventDeck)
+		_, g.EventDeck = Draw(g.EventDeck)
+	}
+	
+	
+	var id string
+	id, g.EventDeck = Draw(g.EventDeck)
+	e := Events[id]
+	g.ActiveEvent = e
+	g.Logf("Drew event: %s", e.Name)
+	
+	var result string
+	switch g.ActiveEvent.Name{
+		case Asteroid:
+			result = g.doAsteroidEvent()
+		case PeaceAndQuiet:
+			result = g.doPeaceAndQuietEvent()
+		case DerelictShip:
+			result = g.doDerelictShipEvent()
+		case Strike:
+			result = g.doStrikeEvent()
+		case Revolt:
+			return RevoltState
+		case SmallInvasionForce:
+			return SmallInvasionForceState
+		case LargeInvasionForce:
+			return LargeInvasionForceState
+		default:
+			result = fmt.Sprintf("No handler defined for event %s", g.ActiveEvent.Name)
+	}
+
+	g.Log(result)
 	return StartState
+}
+
+func handleWin(g *Game) GameState {
+	vps := 0
+	for _, sc := range g.Empire {
+		vps += sc.VPs
+	}
+	g.Logf("%d VPs from your empire.")
+	return EndState
+}
+
+func handleLose(g *Game) GameState {
+	g.Log("You lose.")
+	return EndState
 }
 
 func (g *Game) mayIncreaseMilitaryAbove3() bool {

@@ -7,7 +7,7 @@
     <div flex="50 class="track layout="row">
       <md-card 
           ng-class="{'track-tile': v<=t.value, 'over-value': v>t.value}"
-          ng-repeat="v in [0, 1, 2, 3, 4, 5]">
+          ng-repeat="v in [1, 2, 3, 4, 5]">
       </md-card>
     </div>
     <div flex/>

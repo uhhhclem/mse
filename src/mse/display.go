@@ -11,6 +11,7 @@ type Board struct {
 	Explored         []*SystemCard
 	Gen1Techs        []TechDisplay
 	Gen2Techs        []TechDisplay
+	ActiveEvent		 *EventCard
 }
 
 type TechDisplay struct {
@@ -41,6 +42,7 @@ func (g *Game) GetBoard() *Board {
 		MilitaryStrength: g.MilitaryStrength,
 		Empire:           g.Empire,
 		Explored:         g.Explored,
+		ActiveEvent:	  g.ActiveEvent,
 	}
 	b.Gen1Techs = []TechDisplay{
 		g.getTechDisplay(CapitalShips),
