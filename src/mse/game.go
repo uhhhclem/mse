@@ -11,9 +11,9 @@ const (
 	SystemChoiceState           = "SystemChoice"
 	AttackState                 = "Attack"
 	CollectState                = "Collect"
-	ChooseBuildState = "ChooseBuild"
-	DoBuildState = "DoBuild"
-	EventState = "Event"
+	ChooseBuildState            = "ChooseBuild"
+	DoBuildState                = "DoBuild"
+	EventState                  = "Event"
 	EndState                    = "End"
 )
 
@@ -21,15 +21,32 @@ type stateHandler func(*Game) GameState
 
 var handlers map[GameState]stateHandler
 
+const (
+	BuildDone            = "Done"
+	BuildMilitary        = "Military"
+	BuildWealthFromMetal = "Wealth"
+	BuildMetalFromWealth = "Metal"
+)
+
+var buildChoices map[string]string
+
 func init() {
 	handlers = map[GameState]stateHandler{
-		StartState:   handleStart,
-		AttackState:  handleAttack,
-		CollectState: handleCollect,
+		StartState:       handleStart,
+		AttackState:      handleAttack,
+		CollectState:     handleCollect,
 		ChooseBuildState: handleChooseBuild,
-		DoBuildState: handleDoBuild,
-		EventState: handleEvent,
+		DoBuildState:     handleDoBuild,
+		EventState:       handleEvent,
 	}
+
+	buildChoices = map[string]string{
+		BuildDone:            "Done building",
+		BuildMilitary:        "Increase military strength (cost: 1 wealth, 1 metal)",
+		BuildWealthFromMetal: "Exchange 2 metal for 1 wealth",
+		BuildMetalFromWealth: "Exchange 2 wealth for 1 metal",
+	}
+
 }
 
 type Game struct {
@@ -125,7 +142,6 @@ func (g *Game) collect() {
 	}
 }
 
-
 func handleStart(g *Game) GameState {
 	if g.mayExploreDistantSystems() {
 		return SystemChoiceState
@@ -184,41 +200,89 @@ func handleCollect(g *Game) GameState {
 	g.calculateProduction()
 	metal, wealth := g.MetalStorage, g.WealthStorage
 	g.collect()
-	g.Logf("Collected %d metal and %d wealth.", g.MetalStorage - metal,
-			g.WealthStorage - wealth)
+	g.Logf("Collected %d metal and %d wealth.", g.MetalStorage-metal,
+		g.WealthStorage-wealth)
 	return ChooseBuildState
 }
 
-const (
-	BuildDone = "Done"
-	BuildMilitary = "Military"
-)
-
 func handleChooseBuild(g *Game) GameState {
-	var choices = []*Choice{{Key: BuildDone, Name: "Done"}}
-	if g.WealthStorage > 0 && g.MetalStorage > 0 && g.MilitaryStrength < 6 {
-		choices = append(choices, &Choice{
-			Key: BuildMilitary, 
-			Name: "Increase military strength by 1 (1 wealth, 1 metal)",
-		})
+	var choices []*Choice
+	choices = addChoice(choices, BuildDone)
+
+	maxMilitary := 3
+	if g.mayIncreaseMilitaryAbove3() {
+		maxMilitary = 5
 	}
-	
+	if g.WealthStorage > 0 && g.MetalStorage > 0 && g.MilitaryStrength < maxMilitary {
+		choices = addChoice(choices, BuildMilitary)
+	}
+
+	maxStorage := 3
+	if g.mayStoreUpTo5() {
+		maxStorage = 5
+	}
+	if g.mayExchangeGoods() {
+		if g.MetalStorage > 1 && g.WealthStorage < maxStorage {
+			choices = addChoice(choices, BuildWealthFromMetal)
+		}
+		if g.WealthStorage > 1 && g.MetalStorage < maxStorage {
+			choices = addChoice(choices, BuildMetalFromWealth)
+		}
+	}
+
+	for k, t := range Techs {
+		if g.Techs[k] {
+			continue
+		}
+		if t.DependsOn != "" && !g.Techs[t.DependsOn] {
+			continue
+		}
+		if t.Cost > g.WealthStorage {
+			continue
+		}
+		choices = addChoice(choices, k)
+	}
+
 	g.SendPrompt("Select build:", choices)
-	
+
 	return DoBuildState
+}
+
+func addChoice(choices []*Choice, key string) []*Choice {
+	if name, ok := buildChoices[key]; ok {
+		c := &Choice{Key: key, Name: name}
+		choices = append(choices, c)
+	}
+	if t, ok := Techs[key]; ok {
+		c := &Choice{Key: key, Name: fmt.Sprintf("Build %s", t.Name)}
+		choices = append(choices, c)
+	}
+	return choices
 }
 
 func handleDoBuild(g *Game) GameState {
 	c := <-g.NextChoice
+	if t, ok := Techs[c.Key]; ok {
+		g.Techs[c.Key] = true
+		g.WealthStorage -= t.Cost
+		return ChooseBuildState
+	}
+
 	switch c.Key {
 	case BuildDone:
-	  return EventState
+		return EventState
 	case BuildMilitary:
-	  g.MilitaryStrength += 1
-	  g.MetalStorage -= 1
-	  g.WealthStorage -= 1
+		g.MilitaryStrength += 1
+		g.MetalStorage -= 1
+		g.WealthStorage -= 1
+	case BuildWealthFromMetal:
+		g.MetalStorage -= 2
+		g.WealthStorage += 1
+	case BuildMetalFromWealth:
+		g.WealthStorage -= 2
+		g.MetalStorage += 1
 	default:
-	  g.Logf("Unknown build key %q", c.Key)
+		g.Logf("Unknown build key %q", c.Key)
 	}
 	return ChooseBuildState
 }
@@ -228,8 +292,20 @@ func handleEvent(g *Game) GameState {
 	return StartState
 }
 
+func (g *Game) mayIncreaseMilitaryAbove3() bool {
+	return g.Techs[CapitalShips]
+}
+
+func (g *Game) mayExchangeGoods() bool {
+	return g.Techs[InterspeciesCommerce]
+}
+
 func (g *Game) mayExploreDistantSystems() bool {
-	return false
+	return g.Techs[ForwardStarbases]
+}
+
+func (g *Game) mayStoreUpTo5() bool {
+	return g.Techs[InterstellarBanking]
 }
 
 func (g *Game) exploredToEmpire(sc *SystemCard) {

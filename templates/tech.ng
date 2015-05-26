@@ -1,4 +1,4 @@
-<md-card class="tech">
+<md-card ng-class="{tech: true, owned: tech.Owned}">
   <md-card-content>
     <h3>{{tech.Name}}</h3>
     <p>{{tech.Ability}}</p>
