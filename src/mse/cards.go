@@ -22,7 +22,7 @@ type EventModifier string
 const (
 	InvasionMod EventModifier = "Add +1 Resistance With Planetary Defenses"
 	RevoltMod                 = "+1 System Resistance With Hyper Television"
-	StrikeMod                 = "With Robot Workerrs, gain 1/2 instead of zero (round up)"
+	StrikeMod                 = "With Robot Workers, gain 1/2 instead of zero (round up)"
 )
 
 type EventCard struct {
@@ -92,7 +92,9 @@ type Deck []string
 func init() {
 	rand.Seed(time.Now().UnixNano())
 
-	for _, c := range Systems {
+	Systems = make(map[string]*SystemCard)
+	for i := range systems {
+		c := &systems[i]
 		switch {
 		case c.ID == "1":
 			c.Type = StartingSystem
@@ -101,6 +103,7 @@ func init() {
 		default:
 			c.Type = NearSystem
 		}
+		Systems[c.ID] = c
 	}
 
 	Events = make(map[string]*EventCard)
@@ -108,10 +111,6 @@ func init() {
 		Events[events[i].ID] = &events[i]
 	}
 
-	Systems = make(map[string]*SystemCard)
-	for i := range systems {
-		Systems[systems[i].ID] = &systems[i]
-	}
 }
 
 func shuffle(deck []string) {

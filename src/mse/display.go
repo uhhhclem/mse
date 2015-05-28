@@ -2,6 +2,7 @@ package mse
 
 type Board struct {
 	State            string
+	Year int
 	MetalProduction  int
 	WealthProduction int
 	MetalStorage     int
@@ -12,6 +13,7 @@ type Board struct {
 	Gen1Techs        []TechDisplay
 	Gen2Techs        []TechDisplay
 	ActiveEvent      *EventCard
+	EventsRemaining  int
 }
 
 type TechDisplay struct {
@@ -35,6 +37,7 @@ type PromptResponse struct {
 func (g *Game) GetBoard() *Board {
 	b := &Board{
 		State:            string(g.State),
+		Year:			  g.Year,
 		MetalProduction:  g.MetalProduction,
 		WealthProduction: g.WealthProduction,
 		MetalStorage:     g.MetalStorage,
@@ -43,6 +46,7 @@ func (g *Game) GetBoard() *Board {
 		Empire:           g.Empire,
 		Explored:         g.Explored,
 		ActiveEvent:      g.ActiveEvent,
+		EventsRemaining:  len(g.EventDeck),
 	}
 	b.Gen1Techs = []TechDisplay{
 		g.getTechDisplay(CapitalShips),

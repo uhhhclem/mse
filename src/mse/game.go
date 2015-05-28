@@ -4,12 +4,33 @@ import (
 	"fmt"
 )
 
+type Game struct {
+	State                                        GameState
+	Year                                         int
+	NearSystemDeck, DistantSystemDeck, EventDeck Deck
+	Empire                                       []*SystemCard
+	Explored                                     []*SystemCard
+	ActiveEvent                                  *EventCard
+	Techs                                        map[string]bool
+	UsedTech map[string]bool
+	UsedInterstellarDiplomacy                    bool
+	MetalStorage                                 int
+	WealthStorage                                int
+	MilitaryStrength                             int
+	MetalProduction                              int
+	WealthProduction                             int
+	Prompt                                       *Prompt
+	NextPrompt                                   chan *Prompt
+	NextStatus                                   chan *Status
+	NextChoice                                   chan *Choice
+	Ready                                        chan bool
+}
+
 type GameState string
 
 const (
 	StartState              GameState = "StartOfTurn"
-	SystemChoiceState                 = "SystemChoice"
-	AttackState                       = "Attack"
+	PhaseIState			  = "PhaseI"
 	CollectState                      = "Collect"
 	ChooseBuildState                  = "ChooseBuild"
 	DoBuildState                      = "DoBuild"
@@ -38,7 +59,7 @@ var buildChoices map[string]string
 func init() {
 	handlers = map[GameState]stateHandler{
 		StartState:              handleStart,
-		AttackState:             handleAttack,
+		PhaseIState:			 handlePhaseI,
 		CollectState:            handleCollect,
 		ChooseBuildState:        handleChooseBuild,
 		DoBuildState:            handleDoBuild,
@@ -59,28 +80,6 @@ func init() {
 
 }
 
-type Game struct {
-	State                                        GameState
-	Year                                         int
-	NearSystemDeck, DistantSystemDeck, EventDeck Deck
-	Empire                                       []*SystemCard
-	Explored                                     []*SystemCard
-	ActiveEvent                                  *EventCard
-	Techs                                        map[string]bool
-	UsedInterstellarDiplomacy                    bool
-	MetalStorage                                 int
-	WealthStorage                                int
-	MilitaryStrength                             int
-	MetalProduction                              int
-	WealthProduction                             int
-	Prompt                                       *Prompt
-	NextPrompt                                   chan *Prompt
-	NextStatus                                   chan *Status
-	NextChoice                                   chan *Choice
-	Ready                                        chan bool
-	FreeAttack								     bool
-}
-
 func NewGame() *Game {
 	g := &Game{
 		EventDeck:         []string{"1", "2", "3", "4", "5", "6", "7", "8"},
@@ -89,6 +88,7 @@ func NewGame() *Game {
 		Year:              1,
 		Empire:            []*SystemCard{Systems["1"]},
 		Techs:             make(map[string]bool),
+		UsedTech: make(map[string]bool),
 		NextStatus:        make(chan *Status),
 		NextPrompt:        make(chan *Prompt),
 		NextChoice:        make(chan *Choice),
@@ -168,56 +168,57 @@ func (g *Game) maxStorage() int {
 }
 
 func handleStart(g *Game) GameState {
-	if g.mayExploreDistantSystems() {
-		return SystemChoiceState
+	for k := range g.Techs {
+		g.UsedTech[k] = false
+	}
+	choices := make([]*Choice, 0, len(g.Explored)+2)
+	if g.mayExploreAndAttack() {
+		choices = append(choices, &Choice{"X", "Explore and attack."})
 	}
 
-	var id string
-	if len(g.NearSystemDeck) > 0 {
-		id, g.NearSystemDeck = Draw(g.NearSystemDeck)
-	} else if len(g.DistantSystemDeck) > 0 {
-		id, g.DistantSystemDeck = Draw(g.DistantSystemDeck)
-	}
-	if id != "" {
-		sc := Systems[id]
-		g.Logf("Explored %s", sc.Name)
-		g.Explored = append(g.Explored, sc)
-	} else {
-		g.Log("All systems explored")
-	}
-
-	choices := make([]*Choice, 0, len(g.Explored)+1)
 	for _, sc := range g.Explored {
-		if sc.Type == DistantSystem && !g.Techs[ForwardStarbases] {
-			continue
-		}
 		choices = append(choices, &Choice{
 			Key:  sc.ID,
-			Name: fmt.Sprintf("Attack %s", sc.Name),
+			Name: fmt.Sprintf("Conquer %s", sc.Name),
 		})
 	}
 	choices = append(choices, &Choice{"B", "Bide your time"})
 
 	g.SendPrompt("Select a system to attack, or bide your time.", choices)
 
-	return AttackState
+	return PhaseIState
 }
 
-func handleAttack(g *Game) GameState {
+func (g *Game) mayExploreAndAttack() bool {
+	if len(g.NearSystemDeck) > 0 {
+		return true
+	}
+	if g.Techs[ForwardStarbases] && len(g.DistantSystemDeck) > 0 {
+		return true
+	}
+	return false
+}
+
+func handlePhaseI(g *Game) GameState {
 	c := <-g.NextChoice
 	if c.Key == "B" {
 		g.Log("Biding time...")
 		return CollectState
 	}
-	
-	w := Systems[c.Key]
+
+	var w *SystemCard
+	if c.Key == "X" {
+		w = g.exploreWorld()
+	} else {
+		w = Systems[c.Key]
+	}
 	g.Logf("Attacking %s...", w.Name)
 
 	var success bool
 	roll := Roll()
 	result := "failed"
 
-	if g.FreeAttack {
+	if g.mayMakeFreeAttack() {
 		success = true
 	} else {
 		success = roll+g.MilitaryStrength >= w.Resistance
@@ -226,7 +227,6 @@ func handleAttack(g *Game) GameState {
 		result = "success"
 		g.exploredToEmpire(w)
 	}
-	g.FreeAttack = false
 	g.Logf("Resistance = %d, military strength = %d, roll = %d...%s!",
 		w.Resistance, g.MilitaryStrength, roll, result)
 	if !success && g.MilitaryStrength > 0 {
@@ -235,6 +235,19 @@ func handleAttack(g *Game) GameState {
 	}
 
 	return CollectState
+}
+
+func (g *Game) exploreWorld() *SystemCard {
+	var id string
+	if len(g.NearSystemDeck) > 0 {
+		id, g.NearSystemDeck = Draw(g.NearSystemDeck)
+	} else {
+		id, g.DistantSystemDeck = Draw(g.DistantSystemDeck)
+	}
+	w := Systems[id]
+	g.Explored = append(g.Explored, w)
+	g.Logf("Explored %s.", w.Name)
+	return w
 }
 
 func handleCollect(g *Game) GameState {
@@ -301,9 +314,9 @@ func handleDoBuild(g *Game) GameState {
 
 	if t, ok := Techs[c.Key]; ok {
 		g.Techs[c.Key] = true
+		g.Logf("Bought %s.", t.Name)
 		g.WealthStorage -= t.Cost
 		if c.Key == InterstellarDiplomacy {
-			g.FreeAttack = true
 			g.Log("If you attack next turn, it will automatically succeed.")
 		}
 		return ChooseBuildState
@@ -316,12 +329,17 @@ func handleDoBuild(g *Game) GameState {
 		g.MilitaryStrength += 1
 		g.MetalStorage -= 1
 		g.WealthStorage -= 1
+		g.Log("Built 1 military.")
 	case BuildWealthFromMetal:
 		g.MetalStorage -= 2
 		g.WealthStorage += 1
+		g.UsedTech[InterspeciesCommerce] = true
+		g.Log("Swapped 2 metal for 1 wealth.")
 	case BuildMetalFromWealth:
 		g.WealthStorage -= 2
 		g.MetalStorage += 1
+		g.UsedTech[InterspeciesCommerce] = true
+		g.Log("Swapped 2 wealth for 1 metal.")
 	default:
 		g.Logf("Unknown build key %q", c.Key)
 	}
@@ -330,7 +348,7 @@ func handleDoBuild(g *Game) GameState {
 
 func handleEvent(g *Game) GameState {
 	if len(g.EventDeck) == 0 {
-		g.Log("End of Year 1.")
+		g.Logf("End of Year %d.", g.Year)
 		if g.Year == 2 {
 			return WinState
 		}
@@ -376,7 +394,7 @@ func handleWin(g *Game) GameState {
 	for _, sc := range g.Empire {
 		vps += sc.VPs
 	}
-	g.Logf("%d VPs from your empire.")
+	g.Logf("%d VPs from your empire.", vps)
 	return EndState
 }
 
@@ -385,12 +403,16 @@ func handleLose(g *Game) GameState {
 	return EndState
 }
 
-func (g *Game) mayIncreaseMilitaryAbove3() bool {
-	return g.Techs[CapitalShips]
+func (g *Game) mayExchangeGoods() bool {
+	return g.Techs[InterspeciesCommerce] && !g.UsedTech[InterspeciesCommerce]
 }
 
-func (g *Game) mayExchangeGoods() bool {
-	return g.Techs[InterspeciesCommerce]
+func (g *Game) mayMakeFreeAttack() bool {
+	return g.Techs[InterstellarDiplomacy] && !g.UsedTech[InterstellarDiplomacy]
+}
+
+func (g *Game) mayIncreaseMilitaryAbove3() bool {
+	return g.Techs[CapitalShips]
 }
 
 func (g *Game) mayExploreDistantSystems() bool {

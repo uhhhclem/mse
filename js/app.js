@@ -73,6 +73,14 @@ mseApp.controller('mseCtrl', function($scope, $http, $mdSidenav){
         $mdSidenav('board').close();
     };
 
+    $scope.showStatus = function() {
+        $mdSidenav('status').toggle();
+    };
+    
+    $scope.hideStatus = function() {
+        $mdSidenav('status').close();
+    };
+
     $http.get('/api/newGame').success(function(){
         $scope.getBoard();
         $scope.getStatus();
