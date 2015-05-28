@@ -12,7 +12,7 @@ type Game struct {
 	Explored                                     []*SystemCard
 	ActiveEvent                                  *EventCard
 	Techs                                        map[string]bool
-	UsedTech map[string]bool
+	UsedTech                                     map[string]bool
 	UsedInterstellarDiplomacy                    bool
 	MetalStorage                                 int
 	WealthStorage                                int
@@ -30,7 +30,7 @@ type GameState string
 
 const (
 	StartState              GameState = "StartOfTurn"
-	PhaseIState			  = "PhaseI"
+	PhaseIState                       = "PhaseI"
 	CollectState                      = "Collect"
 	ChooseBuildState                  = "ChooseBuild"
 	DoBuildState                      = "DoBuild"
@@ -59,7 +59,7 @@ var buildChoices map[string]string
 func init() {
 	handlers = map[GameState]stateHandler{
 		StartState:              handleStart,
-		PhaseIState:			 handlePhaseI,
+		PhaseIState:             handlePhaseI,
 		CollectState:            handleCollect,
 		ChooseBuildState:        handleChooseBuild,
 		DoBuildState:            handleDoBuild,
@@ -88,7 +88,7 @@ func NewGame() *Game {
 		Year:              1,
 		Empire:            []*SystemCard{Systems["1"]},
 		Techs:             make(map[string]bool),
-		UsedTech: make(map[string]bool),
+		UsedTech:          make(map[string]bool),
 		NextStatus:        make(chan *Status),
 		NextPrompt:        make(chan *Prompt),
 		NextChoice:        make(chan *Choice),
@@ -390,11 +390,34 @@ func handleEvent(g *Game) GameState {
 }
 
 func handleWin(g *Game) GameState {
-	vps := 0
+	empireVPs, techVPs := 0, 0
 	for _, sc := range g.Empire {
-		vps += sc.VPs
+		empireVPs += sc.VPs
 	}
-	g.Logf("%d VPs from your empire.", vps)
+	for id := range g.Techs {
+		if g.Techs[id] {
+			techVPs += 1
+		}
+	}
+
+	vps := 0
+	g.Logf("%d VPs from your empire.", empireVPs)
+	vps += empireVPs
+	g.Logf("%d VPs from discovered technologies.", techVPs)
+	if len(g.DistantSystemDeck) == 0 {
+		g.Logf("Exploration Bonus (1VP) for exploring all systems.")
+		vps += 1
+	}
+	if techVPs == 8 {
+		g.Logf("Scientific Bonus (1VP) for researching all technologies.")
+		vps += 1
+	}
+	if len(g.DistantSystemDeck) == 0 && len(g.Explored) == 0 {
+		g.Logf("Warlord Bonus (3VP) for conquering all systems.")
+		vps += 3
+	}
+	g.Logf("Final score: %d VPs.", vps)
+
 	return EndState
 }
 

@@ -1,19 +1,21 @@
 package mse
 
 type Board struct {
-	State            string
-	Year int
-	MetalProduction  int
-	WealthProduction int
-	MetalStorage     int
-	WealthStorage    int
-	MilitaryStrength int
-	Empire           []*SystemCard
-	Explored         []*SystemCard
-	Gen1Techs        []TechDisplay
-	Gen2Techs        []TechDisplay
-	ActiveEvent      *EventCard
-	EventsRemaining  int
+	State                   string
+	Year                    int
+	MetalProduction         int
+	WealthProduction        int
+	MetalStorage            int
+	WealthStorage           int
+	MilitaryStrength        int
+	Empire                  []*SystemCard
+	Explored                []*SystemCard
+	Gen1Techs               []TechDisplay
+	Gen2Techs               []TechDisplay
+	ActiveEvent             *EventCard
+	EventsRemaining         int
+	NearSystemsRemaining    int
+	DistantSystemsRemaining int
 }
 
 type TechDisplay struct {
@@ -36,17 +38,19 @@ type PromptResponse struct {
 
 func (g *Game) GetBoard() *Board {
 	b := &Board{
-		State:            string(g.State),
-		Year:			  g.Year,
-		MetalProduction:  g.MetalProduction,
-		WealthProduction: g.WealthProduction,
-		MetalStorage:     g.MetalStorage,
-		WealthStorage:    g.WealthStorage,
-		MilitaryStrength: g.MilitaryStrength,
-		Empire:           g.Empire,
-		Explored:         g.Explored,
-		ActiveEvent:      g.ActiveEvent,
-		EventsRemaining:  len(g.EventDeck),
+		State:                   string(g.State),
+		Year:                    g.Year,
+		MetalProduction:         g.MetalProduction,
+		WealthProduction:        g.WealthProduction,
+		MetalStorage:            g.MetalStorage,
+		WealthStorage:           g.WealthStorage,
+		MilitaryStrength:        g.MilitaryStrength,
+		Empire:                  g.Empire,
+		Explored:                g.Explored,
+		ActiveEvent:             g.ActiveEvent,
+		EventsRemaining:         len(g.EventDeck),
+		NearSystemsRemaining:    len(g.NearSystemDeck),
+		DistantSystemsRemaining: len(g.DistantSystemDeck),
 	}
 	b.Gen1Techs = []TechDisplay{
 		g.getTechDisplay(CapitalShips),

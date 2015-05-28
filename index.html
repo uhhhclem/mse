@@ -106,7 +106,7 @@ md-card > md-toolbar {
         </div>
         
         <div>
-          <md-toolbar class="md-primary md-toolbar-tools">Explored</md-toolbar>
+          <md-toolbar class="md-primary md-toolbar-tools">Explored (Unexplored: {{board.NearSystemsRemaining}} near, {{board.DistantSystemsRemaining}} distant)</md-toolbar>
           <div layout="row" layout-wrap>
             <ng-include ng-repeat="card in board.Explored track by card.ID" src="'templates/card.ng'"/>
           </div>
