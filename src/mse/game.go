@@ -78,6 +78,7 @@ type Game struct {
 	NextStatus                                   chan *Status
 	NextChoice                                   chan *Choice
 	Ready                                        chan bool
+	FreeAttack								     bool
 }
 
 func NewGame() *Game {
@@ -141,26 +142,29 @@ func (g *Game) calculateProduction() {
 
 func (g *Game) addMetal(add int) int {
 	orig := g.MetalStorage
+	max := g.maxStorage()
 	g.MetalStorage += add
-	if g.MetalStorage > 3 && !g.Techs[InterstellarDiplomacy] {
-		g.MetalStorage = 3
-	}
-	if g.MetalStorage > 5 {
-		g.MetalStorage = 5
+	if g.MetalStorage > max {
+		g.MetalStorage = max
 	}
 	return g.MetalStorage - orig
 }
 
 func (g *Game) addWealth(add int) int {
 	orig := g.WealthStorage
+	max := g.maxStorage()
 	g.WealthStorage += add
-	if g.WealthStorage > 3 && !g.Techs[InterstellarDiplomacy] {
-		g.WealthStorage = 3
-	}
-	if g.WealthStorage > 5 {
-		g.WealthStorage = 5
+	if g.WealthStorage > max {
+		g.WealthStorage = max
 	}
 	return g.WealthStorage - orig
+}
+
+func (g *Game) maxStorage() int {
+	if g.Techs[InterstellarBanking] {
+		return 5
+	}
+	return 3
 }
 
 func handleStart(g *Game) GameState {
@@ -205,19 +209,24 @@ func handleAttack(g *Game) GameState {
 		g.Log("Biding time...")
 		return CollectState
 	}
+	
 	w := Systems[c.Key]
 	g.Logf("Attacking %s...", w.Name)
 
+	var success bool
 	roll := Roll()
-	success := roll+g.MilitaryStrength >= w.Resistance
-	result := map[bool]string{
-		true:  "success",
-		false: "failed",
-	}[success]
+	result := "failed"
 
+	if g.FreeAttack {
+		success = true
+	} else {
+		success = roll+g.MilitaryStrength >= w.Resistance
+	}
 	if success {
+		result = "success"
 		g.exploredToEmpire(w)
 	}
+	g.FreeAttack = false
 	g.Logf("Resistance = %d, military strength = %d, roll = %d...%s!",
 		w.Resistance, g.MilitaryStrength, roll, result)
 	if !success && g.MilitaryStrength > 0 {
@@ -248,15 +257,11 @@ func handleChooseBuild(g *Game) GameState {
 		choices = addChoice(choices, BuildMilitary)
 	}
 
-	maxStorage := 3
-	if g.mayStoreUpTo5() {
-		maxStorage = 5
-	}
 	if g.mayExchangeGoods() {
-		if g.MetalStorage > 1 && g.WealthStorage < maxStorage {
+		if g.MetalStorage > 1 && g.WealthStorage < g.maxStorage() {
 			choices = addChoice(choices, BuildWealthFromMetal)
 		}
-		if g.WealthStorage > 1 && g.MetalStorage < maxStorage {
+		if g.WealthStorage > 1 && g.MetalStorage < g.maxStorage() {
 			choices = addChoice(choices, BuildMetalFromWealth)
 		}
 	}
@@ -297,6 +302,10 @@ func handleDoBuild(g *Game) GameState {
 	if t, ok := Techs[c.Key]; ok {
 		g.Techs[c.Key] = true
 		g.WealthStorage -= t.Cost
+		if c.Key == InterstellarDiplomacy {
+			g.FreeAttack = true
+			g.Log("If you attack next turn, it will automatically succeed.")
+		}
 		return ChooseBuildState
 	}
 
@@ -386,10 +395,6 @@ func (g *Game) mayExchangeGoods() bool {
 
 func (g *Game) mayExploreDistantSystems() bool {
 	return g.Techs[ForwardStarbases]
-}
-
-func (g *Game) mayStoreUpTo5() bool {
-	return g.Techs[InterstellarBanking]
 }
 
 func (g *Game) exploredToEmpire(sc *SystemCard) {

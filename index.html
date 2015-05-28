@@ -2,8 +2,15 @@
 
   <!-- Angular Material CSS now available via Google CDN; version 0.8 used here -->
   <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/angular_material/0.8.3/angular-material.min.css">
-
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=RobotoDraft:300,400,500,700,400italic">
+  
   <style type="text/css">
+md-card > md-toolbar {
+  min-height: 32px;
+  font-size: 1em;
+  padding: 8px;
+}  
+
 .metal .track-tile {
   background-color: #e0e0e0; }
 .wealth .track-tile {
@@ -39,7 +46,7 @@
   line-height: 1;
   font-size: 10pt;
 }
-</style>
+  </style>
 
   <!-- Angular Material Dependencies -->
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular.min.js"></script>
@@ -93,22 +100,22 @@
         <div>
           <md-toolbar class="md-primary md-toolbar-tools">Empire</md-toolbar>
           
-          <md-grid-list md-cols="3" md-row-height="1:1">
+          <div layout="row" layout-wrap>
             <ng-include ng-repeat="card in board.Empire track by card.ID" src="'templates/card.ng'"/>
-          </md-grid-list >
+          </div>
         </div>
         
         <div>
           <md-toolbar class="md-primary md-toolbar-tools">Explored</md-toolbar>
-          <md-grid-list md-cols="3" md-row-height="1:1">
+          <div layout="row" layout-wrap>
             <ng-include ng-repeat="card in board.Explored track by card.ID" src="'templates/card.ng'"/>
-          </md-grid-list >
+          </div>
         </div>
         
         <md-card ng-if="board.ActiveEvent">
           <md-toolbar class="md-primary md-toolbar-tools">Event</md-toolbar>
           <md-subheader>{{board.ActiveEvent.Name}}</md-subheader>
-          <md-content>
+          <md-content layout-padding>
             <div layout="column">
               <div layout="row">
                 <div>Year 1:</div>
