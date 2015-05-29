@@ -1,6 +1,7 @@
 package mse
 
 type Board struct {
+	ID string
 	State                   string
 	Year                    int
 	MetalProduction         int
@@ -38,6 +39,7 @@ type PromptResponse struct {
 
 func (g *Game) GetBoard() *Board {
 	b := &Board{
+		ID: g.ID,
 		State:                   string(g.State),
 		Year:                    g.Year,
 		MetalProduction:         g.MetalProduction,

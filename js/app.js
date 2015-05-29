@@ -5,7 +5,7 @@ mseApp.controller('mseCtrl', function($scope, $http, $mdSidenav){
     $scope.status = [];
     
     $scope.getBoard = function() {
-        $http.get('/api/board').success(function(d){
+        $http.get('/api/board', $scope.cfg).success(function(d){
             $scope.board = d;
             if (d.State == "End") {
                 return;
@@ -34,7 +34,7 @@ mseApp.controller('mseCtrl', function($scope, $http, $mdSidenav){
     };
     
     $scope.getStatus = function() {
-        $http.get('/api/status').success(function(d) {
+        $http.get('/api/status', $scope.cfg).success(function(d) {
             $scope.status.push(d);
             if (d.End) {
                 return
@@ -44,7 +44,7 @@ mseApp.controller('mseCtrl', function($scope, $http, $mdSidenav){
     };
     
     $scope.getPrompt = function() {
-        $http.get('/api/prompt').success(function(d) {
+        $http.get('/api/prompt', $scope.cfg).success(function(d) {
             $scope.prompt = d;
             if (d.End) {
                 return
@@ -54,14 +54,11 @@ mseApp.controller('mseCtrl', function($scope, $http, $mdSidenav){
     };
 
     $scope.makeChoice = function(key) {
-        $http.post('/api/choice', {Key: key})
+        $http.post('/api/choice', {ID: $scope.cfg.params.ID, Key: key})
             .success(function(d){
-                console.log('success');
-                console.log(d);
             })
             .error(function(d){
-                console.log('error');
-                console.log(d)
+                $scope.status.push('Choice failed: ' + d);
             });
     };
 
@@ -81,7 +78,8 @@ mseApp.controller('mseCtrl', function($scope, $http, $mdSidenav){
         $mdSidenav('status').close();
     };
 
-    $http.get('/api/newGame').success(function(){
+    $http.get('/api/newGame').success(function(d){
+        $scope.cfg = {params: {ID: d.ID}};
         $scope.getBoard();
         $scope.getStatus();
         $scope.getPrompt();

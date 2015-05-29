@@ -2,9 +2,12 @@ package mse
 
 import (
 	"fmt"
+	
+	"code.google.com/p/go-uuid/uuid"
 )
 
 type Game struct {
+	ID										     string
 	State                                        GameState
 	Year                                         int
 	NearSystemDeck, DistantSystemDeck, EventDeck Deck
@@ -83,6 +86,7 @@ func init() {
 
 func NewGame() *Game {
 	g := &Game{
+		ID:                uuid.New(),
 		EventDeck:         []string{"1", "2", "3", "4", "5", "6", "7", "8"},
 		NearSystemDeck:    []string{"2", "3", "4", "5", "6", "7", "8"},
 		DistantSystemDeck: []string{"9", "10", "11"},
