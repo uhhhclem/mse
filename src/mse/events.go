@@ -2,6 +2,7 @@ package mse
 
 import (
 	"fmt"
+	"math/rand"
 )
 
 func (g *Game) doAsteroidEvent() string {
@@ -26,18 +27,112 @@ func (g *Game) doStrikeEvent() string {
 }
 
 func handleRevolt(g *Game) GameState {
-	g.Log("Revolt not implemented.")
-	return StartState
+	if len(g.Empire) == 1 {
+		if g.Year == 1 {
+			g.Log("The Home World won't revolt in year 1.")
+			return StartState
+		}
+		g.Log("The Home World has revolted.")
+		return LoseState
+	}
+
+	w := g.lowestResistanceWorld()
+
+	forceMod := g.ActiveEvent.Year1Effect
+	if g.Year == 2 {
+		forceMod = g.ActiveEvent.Year2Effect
+	}
+
+	r := w.Resistance
+	resistanceMod := ""
+	if g.Techs[HyperTelevision] {
+		r += 1
+		resistanceMod = " (+1 for Hyper Television)"
+	}
+	roll := Roll()
+	result := "failed"
+	f := map[string]int{
+		"Force +1": 1,
+		"Force +2": 2,
+		"Force +3": 3,
+	}[forceMod]
+	if roll+f >= r {
+		result = "succeeded"
+	}
+
+	g.Logf(
+		"Revolt on %s: %s, Resistance of %d%s, rolled %d...revolt %s!",
+		w.Name, forceMod, w.Resistance, resistanceMod, roll, result)
+
+	if result == "succeeded" {
+		w.Revolted = true
+		g.empireToExplored(w)
+	}
+
+	return EndOfTurnState
 }
 
-func handleSmallInvasionForce(g *Game) GameState {
-	g.Log("Small Invasion Force not implemented.")
-	return StartState
+func (g *Game) lowestResistanceWorld() *SystemCard {
+	minR := 0
+	nonHome := g.Empire[1:]
+	for _, w := range nonHome {
+		if minR == 0 || w.Resistance < minR {
+			minR = w.Resistance
+		}
+	}
+	var worlds []*SystemCard
+	for _, w := range nonHome {
+		if w.Resistance == minR {
+			worlds = append(worlds, w)
+		}
+	}
+	return worlds[rand.Intn(len(worlds))]
 }
 
-func handleLargeInvasionForce(g *Game) GameState {
-	g.Log("Large Invasion Force not implemented.")
-	return StartState
+func handleInvasion(g *Game) GameState {
+	if len(g.Empire) == 1 {
+		if g.Year == 1 {
+			g.Log("Invasion force won't attack the Home World in year 1.")
+			return StartState
+		}
+		g.Log("The Home World has been invaded.")
+		return LoseState
+	}
+
+	w := g.Empire[len(g.Empire)-1]
+
+	forceMod := g.ActiveEvent.Year1Effect
+	if g.Year == 2 {
+		forceMod = g.ActiveEvent.Year2Effect
+	}
+
+	r := w.Resistance
+	resistanceMod := ""
+	if g.Techs[PlanetaryDefenses] {
+		r += 1
+		resistanceMod = " (+1 for Planetary Defenses)"
+	}
+	roll := Roll()
+	result := "failed"
+	f := map[string]int{
+		"Force +1": 1,
+		"Force +2": 2,
+		"Force +3": 3,
+	}[forceMod]
+	if roll+f >= r {
+		result = "succeeded"
+	}
+
+	g.Logf(
+		"Invasion on %s: %s, Resistance of %d%s, rolled %d...invasion %s!",
+		w.Name, forceMod, w.Resistance, resistanceMod, roll, result)
+
+	if result == "succeeded" {
+		w.Invaded = true
+		g.empireToExplored(w)
+	}
+
+	return EndOfTurnState
 }
 
 func (g *Game) isStrikeActive() bool {

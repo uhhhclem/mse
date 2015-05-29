@@ -5,6 +5,11 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=RobotoDraft:300,400,500,700,400italic">
   
   <style type="text/css">
+a:link, a:visited {
+  text-decoration: none;
+  font-weight: bold;
+}
+
 md-card > md-toolbar {
   min-height: 32px;
   font-size: 1em;
@@ -144,12 +149,12 @@ md-card > md-toolbar {
         {{prompt.Message}}
       </md-content>
       <md-content ng-repeat="c in prompt.Choices" layout-padding>
-        <a href="#" ng-click="makeChoice(c.Key)">{{c.Name}}</a>
+        <a class="md-primary" href="#" ng-click="makeChoice(c.Key)">{{c.Name}}</a>
       </md-content>
     </div>
     <div flex="40">
       <md-subheader class="md-primary">Status</md-subheader>
-      <div ng-repeat="s in status.slice(-3)">
+      <div ng-repeat="s in status.slice(-5)">
         {{s.Message}}
       </div>
     </div>

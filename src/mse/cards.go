@@ -62,6 +62,7 @@ type SystemCard struct {
 	Metal      int
 	Wealth     int
 	VPs        int
+	Invaded    bool
 	Revolted   bool
 }
 

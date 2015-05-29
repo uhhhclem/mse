@@ -13,7 +13,6 @@ type Game struct {
 	ActiveEvent                                  *EventCard
 	Techs                                        map[string]bool
 	UsedTech                                     map[string]bool
-	UsedInterstellarDiplomacy                    bool
 	MetalStorage                                 int
 	WealthStorage                                int
 	MilitaryStrength                             int
@@ -38,6 +37,7 @@ const (
 	RevoltState                       = "Revolt"
 	SmallInvasionForceState           = "SmallInvasionForce"
 	LargeInvasionForceState           = "LargeInvasionForce"
+	EndOfTurnState                    = "EndOfTurn"
 	WinState                          = "Win"
 	LoseState                         = "Lose"
 	EndState                          = "End"
@@ -65,8 +65,9 @@ func init() {
 		DoBuildState:            handleDoBuild,
 		EventState:              handleEvent,
 		RevoltState:             handleRevolt,
-		SmallInvasionForceState: handleSmallInvasionForce,
-		LargeInvasionForceState: handleLargeInvasionForce,
+		SmallInvasionForceState: handleInvasion,
+		LargeInvasionForceState: handleInvasion,
+		EndOfTurnState:          handleEndOfTurn,
 		WinState:                handleWin,
 		LoseState:               handleLose,
 	}
@@ -168,12 +169,12 @@ func (g *Game) maxStorage() int {
 }
 
 func handleStart(g *Game) GameState {
-	for k := range g.Techs {
-		g.UsedTech[k] = false
-	}
+	// Interspecies Commerce is usable once a turn
+	g.UsedTech[InterspeciesCommerce] = false
+
 	choices := make([]*Choice, 0, len(g.Explored)+2)
 	if g.mayExploreAndAttack() {
-		choices = append(choices, &Choice{"X", "Explore and attack."})
+		choices = append(choices, &Choice{"X", "Explore and attack"})
 	}
 
 	for _, sc := range g.Explored {
@@ -201,6 +202,7 @@ func (g *Game) mayExploreAndAttack() bool {
 
 func handlePhaseI(g *Game) GameState {
 	c := <-g.NextChoice
+
 	if c.Key == "B" {
 		g.Log("Biding time...")
 		return CollectState
@@ -212,23 +214,40 @@ func handlePhaseI(g *Game) GameState {
 	} else {
 		w = Systems[c.Key]
 	}
-	g.Logf("Attacking %s...", w.Name)
-
-	var success bool
-	roll := Roll()
-	result := "failed"
 
 	if g.mayMakeFreeAttack() {
-		success = true
-	} else {
-		success = roll+g.MilitaryStrength >= w.Resistance
+		g.Logf("%s conquered through interstellar diplomacy.", w.Name)
+		g.exploredToEmpire(w)
+		g.UsedTech[InterstellarDiplomacy] = true
+		return CollectState
 	}
+
+	g.Logf("Attacking %s...", w.Name)
+
+	roll := Roll()
+	result := "failed"
+	modifier := ""
+
+	r := w.Resistance
+	if w.Revolted && g.Techs[HyperTelevision] {
+		r += 1
+		modifier = " (+1 for previous revolt)"
+	}
+	if w.Invaded && g.Techs[PlanetaryDefenses] {
+		r += 1
+		modifier = " (+1 for invaded world's defenses)"
+	}
+
+	success := roll+g.MilitaryStrength >= r
+
 	if success {
 		result = "success"
 		g.exploredToEmpire(w)
+		w.Revolted = false
+		w.Invaded = false
 	}
-	g.Logf("Resistance = %d, military strength = %d, roll = %d...%s!",
-		w.Resistance, g.MilitaryStrength, roll, result)
+	g.Logf("Resistance = %d%s, military strength = %d, roll = %d...%s!",
+		w.Resistance, modifier, g.MilitaryStrength, roll, result)
 	if !success && g.MilitaryStrength > 0 {
 		g.MilitaryStrength -= 1
 		g.Logf("Military strength reduced to %d.", g.MilitaryStrength)
@@ -347,18 +366,6 @@ func handleDoBuild(g *Game) GameState {
 }
 
 func handleEvent(g *Game) GameState {
-	if len(g.EventDeck) == 0 {
-		g.Logf("End of Year %d.", g.Year)
-		if g.Year == 2 {
-			return WinState
-		}
-		g.Year += 1
-		g.EventDeck = []string{"1", "2", "3", "4", "5", "6", "7", "8"}
-		shuffle(g.EventDeck)
-		_, g.EventDeck = Draw(g.EventDeck)
-		_, g.EventDeck = Draw(g.EventDeck)
-	}
-
 	var id string
 	id, g.EventDeck = Draw(g.EventDeck)
 	e := Events[id]
@@ -386,6 +393,21 @@ func handleEvent(g *Game) GameState {
 	}
 
 	g.Log(result)
+	return EndOfTurnState
+}
+
+func handleEndOfTurn(g *Game) GameState {
+	if len(g.EventDeck) == 0 {
+		g.Logf("End of Year %d.", g.Year)
+		if g.Year == 2 {
+			return WinState
+		}
+		g.Year += 1
+		g.EventDeck = []string{"1", "2", "3", "4", "5", "6", "7", "8"}
+		shuffle(g.EventDeck)
+		_, g.EventDeck = Draw(g.EventDeck)
+		_, g.EventDeck = Draw(g.EventDeck)
+	}
 	return StartState
 }
 
@@ -404,6 +426,7 @@ func handleWin(g *Game) GameState {
 	g.Logf("%d VPs from your empire.", empireVPs)
 	vps += empireVPs
 	g.Logf("%d VPs from discovered technologies.", techVPs)
+	vps += techVPs
 	if len(g.DistantSystemDeck) == 0 {
 		g.Logf("Exploration Bonus (1VP) for exploring all systems.")
 		vps += 1
