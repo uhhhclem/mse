@@ -35,80 +35,90 @@ func apiNewGame(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type apiHandler func(*mse.Game, http.ResponseWriter, *http.Request)
+type apiGetHandler func(*mse.Game, http.ResponseWriter, *http.Request) ([]byte, error)
 
-func apiWrapper(h apiHandler) func(http.ResponseWriter, *http.Request) {
+func apiGetWrapper(h apiGetHandler) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Print(r.URL)
+		var err error
+		defer func() {
+			status := http.StatusOK
+			if err != nil {
+				status = http.StatusInternalServerError
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(err.Error()))
+			}
+			log.Printf("%d %s", status, r.URL)
+		}()
+		
 		id := r.FormValue("ID")
-		if game, ok := games[id]; !ok {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("Game ID %s not found.", id)))
-		} else {
-			h(game, w, r)
+		game := games[id]
+		if game == nil {
+			err = fmt.Errorf("Game ID %s not found.", id)
+			return
+		} 
+		
+		var b []byte
+		if b, err = h(game, w, r); err != nil {
+			return
 		}
+		w.Write(b)
 	}
 }
 
-func apiGetStatus(game *mse.Game, w http.ResponseWriter, r *http.Request) {
+func apiGetStatus(game *mse.Game, w http.ResponseWriter, r *http.Request) ([]byte, error) {
 	s := <-game.NextStatus
 	resp := mse.StatusResponse{End: s == nil}
 	if s != nil {
 		resp.Status = *s
 	}
-	if b, err := json.Marshal(resp); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-	} else {
-		w.Write(b)
-	}
+	return json.Marshal(resp)
 }
 
-func apiGetBoard(game *mse.Game, w http.ResponseWriter, r *http.Request) {
+func apiGetBoard(game *mse.Game, w http.ResponseWriter, r *http.Request) ([]byte, error) {
 	<-game.Ready
-
-	if b, err := json.Marshal(game.GetBoard()); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-	} else {
-		w.Write(b)
-	}
+	return json.Marshal(game.GetBoard())
 }
 
-func apiGetPrompt(game *mse.Game, w http.ResponseWriter, r *http.Request) {
+func apiGetPrompt(game *mse.Game, w http.ResponseWriter, r *http.Request) ([]byte, error) {
 	p := <-game.NextPrompt
 	resp := mse.PromptResponse{End: p == nil}
 	if p != nil {
 		resp.Prompt = *p
 	}
-	if b, err := json.Marshal(resp); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-	} else {
-		w.Write(b)
-	}
+	
+	return json.Marshal(resp)
 }
 
 func apiPostChoice(w http.ResponseWriter, r *http.Request) {
+	var err error
+	var id string
+	var key string
+	defer func() {
+		if err == nil {
+			log.Printf("%d %s id=%s key=%s", http.StatusOK, r.URL, id, key)
+		} else {		
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			log.Printf("%d %s %s", http.StatusInternalServerError, r.URL, err.Error())
+		}
+	}()
+	
 	req := struct{ 
 		ID string
 		Key string 
 	}{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+	if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return
 	}
-	game, ok := games[req.ID]
+	
+	id, key = req.ID, req.Key
+	game, ok := games[id]
 	if !ok {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("Game %s not found.", req.ID)))
-	} else if err := game.MakeChoice(req.Key); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-	} else {
-		w.WriteHeader(http.StatusOK)
+		err = fmt.Errorf("Game %s not found.", id)
+		return
 	}
+	
+	err = game.MakeChoice(key)
 }
 
 func main() {
@@ -117,14 +127,14 @@ func main() {
 
 	handlers := []struct{
 		url string
-		handler apiHandler
+		handler apiGetHandler
 	}{
 		{"/api/board", apiGetBoard},
 		{"/api/status", apiGetStatus},
 		{"/api/prompt", apiGetPrompt},
 	}
 	for _, h := range handlers {
-		http.HandleFunc(h.url, apiWrapper(h.handler))
+		http.HandleFunc(h.url, apiGetWrapper(h.handler))
 	}
 		
 	http.Handle("/", http.FileServer(http.Dir("./..")))
