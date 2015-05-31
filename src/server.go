@@ -11,20 +11,19 @@ import (
 
 var games map[string]*mse.Game
 
-
 func apiNewGame(w http.ResponseWriter, r *http.Request) {
 	g := mse.NewGame()
 	go g.Run()
-	
+
 	if games == nil {
 		games = make(map[string]*mse.Game)
 	}
 	games[g.ID] = g
 
-	resp := struct{
+	resp := struct {
 		ID string
 	}{
-		ID:g.ID,
+		ID: g.ID,
 	}
 
 	if b, err := json.Marshal(resp); err != nil {
@@ -49,14 +48,14 @@ func apiGetWrapper(h apiGetHandler) func(http.ResponseWriter, *http.Request) {
 			}
 			log.Printf("%d %s", status, r.URL)
 		}()
-		
+
 		id := r.FormValue("ID")
 		game := games[id]
 		if game == nil {
 			err = fmt.Errorf("Game ID %s not found.", id)
 			return
-		} 
-		
+		}
+
 		var b []byte
 		if b, err = h(game, w, r); err != nil {
 			return
@@ -85,7 +84,7 @@ func apiGetPrompt(game *mse.Game, w http.ResponseWriter, r *http.Request) ([]byt
 	if p != nil {
 		resp.Prompt = *p
 	}
-	
+
 	return json.Marshal(resp)
 }
 
@@ -96,28 +95,28 @@ func apiPostChoice(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err == nil {
 			log.Printf("%d %s id=%s key=%s", http.StatusOK, r.URL, id, key)
-		} else {		
+		} else {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 			log.Printf("%d %s %s", http.StatusInternalServerError, r.URL, err.Error())
 		}
 	}()
-	
-	req := struct{ 
-		ID string
-		Key string 
+
+	req := struct {
+		ID  string
+		Key string
 	}{}
 	if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return
 	}
-	
+
 	id, key = req.ID, req.Key
 	game, ok := games[id]
 	if !ok {
 		err = fmt.Errorf("Game %s not found.", id)
 		return
 	}
-	
+
 	err = game.MakeChoice(key)
 }
 
@@ -125,8 +124,8 @@ func main() {
 	http.HandleFunc("/api/newGame", apiNewGame)
 	http.HandleFunc("/api/choice", apiPostChoice)
 
-	handlers := []struct{
-		url string
+	handlers := []struct {
+		url     string
 		handler apiGetHandler
 	}{
 		{"/api/board", apiGetBoard},
@@ -136,7 +135,7 @@ func main() {
 	for _, h := range handlers {
 		http.HandleFunc(h.url, apiGetWrapper(h.handler))
 	}
-		
+
 	http.Handle("/", http.FileServer(http.Dir("./..")))
 
 	http.ListenAndServe(":8080", nil)

@@ -2,13 +2,12 @@ package mse
 
 import (
 	"fmt"
-	
-	"code.google.com/p/go-uuid/uuid"
+
+	"interact"
 )
 
 type Game struct {
-	ID										     string
-	State                                        GameState
+	interact.Game
 	Year                                         int
 	NearSystemDeck, DistantSystemDeck, EventDeck Deck
 	Empire                                       []*SystemCard
@@ -21,34 +20,30 @@ type Game struct {
 	MilitaryStrength                             int
 	MetalProduction                              int
 	WealthProduction                             int
-	Prompt                                       *Prompt
-	NextPrompt                                   chan *Prompt
-	NextStatus                                   chan *Status
-	NextChoice                                   chan *Choice
-	Ready                                        chan bool
 }
 
-type GameState string
-
 const (
-	StartState              GameState = "StartOfTurn"
-	PhaseIState                       = "PhaseI"
-	CollectState                      = "Collect"
-	ChooseBuildState                  = "ChooseBuild"
-	DoBuildState                      = "DoBuild"
-	EventState                        = "Event"
-	RevoltState                       = "Revolt"
-	SmallInvasionForceState           = "SmallInvasionForce"
-	LargeInvasionForceState           = "LargeInvasionForce"
-	EndOfTurnState                    = "EndOfTurn"
-	WinState                          = "Win"
-	LoseState                         = "Lose"
-	EndState                          = "End"
+	StartState              interact.GameState = "StartOfTurn"
+	PhaseIState                                = "PhaseI"
+	CollectState                               = "Collect"
+	ChooseBuildState                           = "ChooseBuild"
+	DoBuildState                               = "DoBuild"
+	EventState                                 = "Event"
+	RevoltState                                = "Revolt"
+	SmallInvasionForceState                    = "SmallInvasionForce"
+	LargeInvasionForceState                    = "LargeInvasionForce"
+	EndOfTurnState                             = "EndOfTurn"
+	WinState                                   = "Win"
+	LoseState                                  = "Lose"
+	EndState                                   = "End"
 )
 
-type stateHandler func(*Game) GameState
+type stateHandler func(*Game) interact.GameState
 
-var handlers map[GameState]stateHandler
+var (
+	handlers         map[interact.GameState]stateHandler
+	buildChoiceNames map[string]string
+)
 
 const (
 	BuildDone            = "Done"
@@ -57,10 +52,8 @@ const (
 	BuildMetalFromWealth = "Metal"
 )
 
-var buildChoices map[string]string
-
 func init() {
-	handlers = map[GameState]stateHandler{
+	handlers = map[interact.GameState]stateHandler{
 		StartState:              handleStart,
 		PhaseIState:             handlePhaseI,
 		CollectState:            handleCollect,
@@ -75,18 +68,17 @@ func init() {
 		LoseState:               handleLose,
 	}
 
-	buildChoices = map[string]string{
+	buildChoiceNames = map[string]string{
 		BuildDone:            "Done building",
 		BuildMilitary:        "Increase military strength (cost: 1 wealth, 1 metal)",
 		BuildWealthFromMetal: "Exchange 2 metal for 1 wealth",
 		BuildMetalFromWealth: "Exchange 2 wealth for 1 metal",
 	}
-
 }
 
 func NewGame() *Game {
 	g := &Game{
-		ID:                uuid.New(),
+		Game:              *interact.NewGame(),
 		EventDeck:         []string{"1", "2", "3", "4", "5", "6", "7", "8"},
 		NearSystemDeck:    []string{"2", "3", "4", "5", "6", "7", "8"},
 		DistantSystemDeck: []string{"9", "10", "11"},
@@ -94,10 +86,6 @@ func NewGame() *Game {
 		Empire:            []*SystemCard{Systems["1"]},
 		Techs:             make(map[string]bool),
 		UsedTech:          make(map[string]bool),
-		NextStatus:        make(chan *Status),
-		NextPrompt:        make(chan *Prompt),
-		NextChoice:        make(chan *Choice),
-		Ready:             make(chan bool),
 	}
 	shuffle(g.EventDeck)
 	_, g.EventDeck = Draw(g.EventDeck)
@@ -172,24 +160,21 @@ func (g *Game) maxStorage() int {
 	return 3
 }
 
-func handleStart(g *Game) GameState {
+func handleStart(g *Game) interact.GameState {
 	// Interspecies Commerce is usable once a turn
 	g.UsedTech[InterspeciesCommerce] = false
 
-	choices := make([]*Choice, 0, len(g.Explored)+2)
+	g.NewPrompt("Select a system to attack, or bide your time.")
 	if g.mayExploreAndAttack() {
-		choices = append(choices, &Choice{"X", "Explore and attack"})
+		g.AddChoice("X", "Explore and attack")
 	}
 
 	for _, sc := range g.Explored {
-		choices = append(choices, &Choice{
-			Key:  sc.ID,
-			Name: fmt.Sprintf("Conquer %s", sc.Name),
-		})
+		g.AddChoice(sc.ID, fmt.Sprintf("Conquer %s", sc.Name))
 	}
-	choices = append(choices, &Choice{"B", "Bide your time"})
+	g.AddChoice("B", "Bide your time")
 
-	g.SendPrompt("Select a system to attack, or bide your time.", choices)
+	g.SendPrompt()
 
 	return PhaseIState
 }
@@ -204,7 +189,7 @@ func (g *Game) mayExploreAndAttack() bool {
 	return false
 }
 
-func handlePhaseI(g *Game) GameState {
+func handlePhaseI(g *Game) interact.GameState {
 	c := <-g.NextChoice
 
 	if c.Key == "B" {
@@ -273,7 +258,7 @@ func (g *Game) exploreWorld() *SystemCard {
 	return w
 }
 
-func handleCollect(g *Game) GameState {
+func handleCollect(g *Game) interact.GameState {
 	g.calculateProduction()
 	metal := g.addMetal(g.MetalProduction)
 	wealth := g.addWealth(g.WealthProduction)
@@ -281,24 +266,27 @@ func handleCollect(g *Game) GameState {
 	return ChooseBuildState
 }
 
-func handleChooseBuild(g *Game) GameState {
-	var choices []*Choice
-	choices = addChoice(choices, BuildDone)
+func handleChooseBuild(g *Game) interact.GameState {
+	addChoice := func(k string) {
+		g.AddChoice(k, buildChoiceNames[k])
+	}
+	g.NewPrompt("Select build:")
+	addChoice(BuildDone)
 
 	maxMilitary := 3
 	if g.mayIncreaseMilitaryAbove3() {
 		maxMilitary = 5
 	}
 	if g.WealthStorage > 0 && g.MetalStorage > 0 && g.MilitaryStrength < maxMilitary {
-		choices = addChoice(choices, BuildMilitary)
+		addChoice(BuildMilitary)
 	}
 
 	if g.mayExchangeGoods() {
 		if g.MetalStorage > 1 && g.WealthStorage < g.maxStorage() {
-			choices = addChoice(choices, BuildWealthFromMetal)
+			addChoice(BuildWealthFromMetal)
 		}
 		if g.WealthStorage > 1 && g.MetalStorage < g.maxStorage() {
-			choices = addChoice(choices, BuildMetalFromWealth)
+			addChoice(BuildMetalFromWealth)
 		}
 	}
 
@@ -312,27 +300,15 @@ func handleChooseBuild(g *Game) GameState {
 		if t.Cost > g.WealthStorage {
 			continue
 		}
-		choices = addChoice(choices, k)
+		g.AddChoice(k, t.Name)
 	}
 
-	g.SendPrompt("Select build:", choices)
+	g.SendPrompt()
 
 	return DoBuildState
 }
 
-func addChoice(choices []*Choice, key string) []*Choice {
-	if name, ok := buildChoices[key]; ok {
-		c := &Choice{Key: key, Name: name}
-		choices = append(choices, c)
-	}
-	if t, ok := Techs[key]; ok {
-		c := &Choice{Key: key, Name: fmt.Sprintf("Build %s", t.Name)}
-		choices = append(choices, c)
-	}
-	return choices
-}
-
-func handleDoBuild(g *Game) GameState {
+func handleDoBuild(g *Game) interact.GameState {
 	c := <-g.NextChoice
 
 	if t, ok := Techs[c.Key]; ok {
@@ -369,7 +345,7 @@ func handleDoBuild(g *Game) GameState {
 	return ChooseBuildState
 }
 
-func handleEvent(g *Game) GameState {
+func handleEvent(g *Game) interact.GameState {
 	var id string
 	id, g.EventDeck = Draw(g.EventDeck)
 	e := Events[id]
@@ -400,7 +376,7 @@ func handleEvent(g *Game) GameState {
 	return EndOfTurnState
 }
 
-func handleEndOfTurn(g *Game) GameState {
+func handleEndOfTurn(g *Game) interact.GameState {
 	if len(g.EventDeck) == 0 {
 		g.Logf("End of Year %d.", g.Year)
 		if g.Year == 2 {
@@ -415,7 +391,7 @@ func handleEndOfTurn(g *Game) GameState {
 	return StartState
 }
 
-func handleWin(g *Game) GameState {
+func handleWin(g *Game) interact.GameState {
 	empireVPs, techVPs := 0, 0
 	for _, sc := range g.Empire {
 		empireVPs += sc.VPs
@@ -448,7 +424,7 @@ func handleWin(g *Game) GameState {
 	return EndState
 }
 
-func handleLose(g *Game) GameState {
+func handleLose(g *Game) interact.GameState {
 	g.Log("You lose.")
 	return EndState
 }

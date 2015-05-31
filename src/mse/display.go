@@ -1,7 +1,11 @@
 package mse
 
+import (
+	"interact"
+)
+
 type Board struct {
-	ID string
+	ID                      string
 	State                   string
 	Year                    int
 	MetalProduction         int
@@ -28,18 +32,18 @@ type TechDisplay struct {
 }
 
 type StatusResponse struct {
-	Status
+	interact.Status
 	End bool
 }
 
 type PromptResponse struct {
-	Prompt
+	interact.Prompt
 	End bool
 }
 
 func (g *Game) GetBoard() *Board {
 	b := &Board{
-		ID: g.ID,
+		ID:                      g.ID,
 		State:                   string(g.State),
 		Year:                    g.Year,
 		MetalProduction:         g.MetalProduction,

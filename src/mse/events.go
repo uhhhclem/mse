@@ -3,6 +3,8 @@ package mse
 import (
 	"fmt"
 	"math/rand"
+
+	"interact"
 )
 
 func (g *Game) doAsteroidEvent() string {
@@ -26,7 +28,7 @@ func (g *Game) doStrikeEvent() string {
 	return "No production next turn."
 }
 
-func handleRevolt(g *Game) GameState {
+func handleRevolt(g *Game) interact.GameState {
 	if len(g.Empire) == 1 {
 		if g.Year == 1 {
 			g.Log("The Home World won't revolt in year 1.")
@@ -89,7 +91,7 @@ func (g *Game) lowestResistanceWorld() *SystemCard {
 	return worlds[rand.Intn(len(worlds))]
 }
 
-func handleInvasion(g *Game) GameState {
+func handleInvasion(g *Game) interact.GameState {
 	if len(g.Empire) == 1 {
 		if g.Year == 1 {
 			g.Log("Invasion force won't attack the Home World in year 1.")
